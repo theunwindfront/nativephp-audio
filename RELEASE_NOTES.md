@@ -4,6 +4,11 @@
 - **Remote Control Commands**: Handle play/pause/prev/next from headphones and lock screens.
 - **Improved Background Playback**: Better stability for long-running audio sessions.
 
+## 🎵 NativePHP Audio Player v1.0.3
+
+### Fixes
+- **iOS**: Updates to `AudioFunctions.swift` implementation.
+
 ## 🎵 NativePHP Audio Player v1.0.2
 
 

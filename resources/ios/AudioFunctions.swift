@@ -30,7 +30,7 @@ enum AudioFunctions {
         func execute(parameters: [String: Any]) throws -> [String: Any] {
             guard let urlString = parameters["url"] as? String,
                   let url = URL(string: urlString) else {
-                return BridgeResponse.error(message: "URL is required and must be valid.")
+                return BridgeResponse.error(code: "INVALID_PARAMETERS", message: "URL is required and must be valid.")
             }
 
             // Cleanup previous observer if any
