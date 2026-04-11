@@ -4,11 +4,15 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.media.MediaPlayer
 import android.net.Uri
+import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import com.nativephp.mobile.bridge.BridgeFunction
@@ -20,17 +24,24 @@ class AudioFunctions {
     companion object {
         private var mediaPlayer: MediaPlayer? = null
         private var mediaSession: MediaSessionCompat? = null
+        private var audioManager: AudioManager? = null
+        private var audioFocusRequest: AudioFocusRequest? = null
         
         internal var currentArtwork: Bitmap? = null
         private var metaTitle: String? = null
         private var metaArtist: String? = null
         private var metaAlbum: String? = null
         private var metaDurationMs: Long? = null
+        private var currentUrl: String? = null
 
         private const val EVENT_PREFIX = "Theunwindfront\\Audio\\Events\\"
 
         fun getSessionToken(context: Context): MediaSessionCompat.Token {
             return getOrCreateSession(context).sessionToken
+        }
+
+        fun getMediaController(context: Context): MediaControllerCompat? {
+            return mediaSession?.controller
         }
 
         private fun getOrCreateSession(context: Context): MediaSessionCompat {
@@ -40,23 +51,26 @@ class AudioFunctions {
                 isActive = true
                 setCallback(object : MediaSessionCompat.Callback() {
                     override fun onPlay() {
-                        mediaPlayer?.start()
-                        updatePlaybackState()
-                        AudioService.refreshState(context)
-                        sendEvent(context, "PlaybackStarted", mapOf("url" to (currentUrl ?: "")))
+                        if (requestAudioFocus(context)) {
+                            mediaPlayer?.start()
+                            updatePlaybackState()
+                            AudioService.refreshState(context)
+                            sendEvent(context, "RemotePlayReceived", mapOf("url" to (currentUrl ?: "")))
+                        }
                     }
 
                     override fun onPause() {
                         mediaPlayer?.pause()
                         updatePlaybackState()
                         AudioService.refreshState(context)
-                        sendEvent(context, "PlaybackPaused", emptyMap())
+                        sendEvent(context, "RemotePauseReceived", emptyMap())
                     }
 
                     override fun onStop() {
                         mediaPlayer?.stop()
                         mediaPlayer?.release()
                         mediaPlayer = null
+                        abandonAudioFocus()
                         updatePlaybackState()
                         AudioService.stop(context)
                         sendEvent(context, "PlaybackStopped", emptyMap())
@@ -66,13 +80,19 @@ class AudioFunctions {
                         mediaPlayer?.seekTo(pos.toInt())
                         updatePlaybackState()
                     }
+
+                    override fun onSkipToNext() {
+                        sendEvent(context, "RemoteNextTrackReceived", emptyMap())
+                    }
+
+                    override fun onSkipToPrevious() {
+                        sendEvent(context, "RemotePreviousTrackReceived", emptyMap())
+                    }
                 })
             }
             mediaSession = session
             return session
         }
-
-        private var currentUrl: String? = null
 
         private fun updatePlaybackState() {
             val session = mediaSession ?: return
@@ -83,7 +103,9 @@ class AudioFunctions {
                     PlaybackStateCompat.ACTION_PLAY or
                     PlaybackStateCompat.ACTION_PAUSE or
                     PlaybackStateCompat.ACTION_STOP or
-                    PlaybackStateCompat.ACTION_SEEK_TO
+                    PlaybackStateCompat.ACTION_SEEK_TO or
+                    PlaybackStateCompat.ACTION_SKIP_TO_NEXT or
+                    PlaybackStateCompat.ACTION_SKIP_TO_PREVIOUS
                 )
                 .setState(
                     if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
@@ -113,6 +135,7 @@ class AudioFunctions {
         }
 
         private fun loadArtworkAsync(context: Context, source: String) {
+            val capturedUrl = currentUrl
             Thread {
                 try {
                     val bitmap = if (source.startsWith("http")) {
@@ -122,10 +145,12 @@ class AudioFunctions {
                     }
                     
                     bitmap?.let { 
-                        currentArtwork = it
-                        Handler(Looper.getMainLooper()).post {
-                            applyMetadata(context)
-                            AudioService.refreshState(context)
+                        if (currentUrl == capturedUrl) {
+                            currentArtwork = it
+                            Handler(Looper.getMainLooper()).post {
+                                applyMetadata(context)
+                                AudioService.refreshState(context)
+                            }
                         }
                     }
                 } catch (e: Exception) {
@@ -134,17 +159,59 @@ class AudioFunctions {
             }.start()
         }
 
-        fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
+        // --- Audio Focus Handling ---
         
-        private fun JSONObject.toMap(): Map<String, Any> {
-            val map = mutableMapOf<String, Any>()
-            val keys = this.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                map[key] = this.get(key)
+        private val focusChangeListener = AudioManager.OnAudioFocusChangeListener { focusChange ->
+            when (focusChange) {
+                AudioManager.AUDIOFOCUS_GAIN -> {
+                    mediaPlayer?.let {
+                        it.setVolume(1.0f, 1.0f)
+                        if (!it.isPlaying) it.start()
+                    }
+                    updatePlaybackState()
+                }
+                AudioManager.AUDIOFOCUS_LOSS, AudioManager.AUDIOFOCUS_LOSS_TRANSIENT -> {
+                    mediaPlayer?.pause()
+                    updatePlaybackState()
+                }
+                AudioManager.AUDIOFOCUS_LOSS_TRANSIENT_CAN_DUCK -> {
+                    mediaPlayer?.setVolume(0.2f, 0.2f)
+                }
             }
-            return map
         }
+
+        private fun requestAudioFocus(context: Context): Boolean {
+            val am = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+            audioManager = am
+            
+            return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                val request = AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN)
+                    .setAudioAttributes(AudioAttributes.Builder()
+                        .setUsage(AudioAttributes.USAGE_MEDIA)
+                        .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                        .build())
+                    .setAcceptsDelayedFocusGain(true)
+                    .setOnAudioFocusChangeListener(focusChangeListener)
+                    .build()
+                audioFocusRequest = request
+                am.requestAudioFocus(request) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            } else {
+                @Suppress("DEPRECATION")
+                am.requestAudioFocus(focusChangeListener, AudioManager.STREAM_MUSIC, AudioManager.AUDIOFOCUS_GAIN) == AudioManager.AUDIOFOCUS_REQUEST_GRANTED
+            }
+        }
+
+        private fun abandonAudioFocus() {
+            val am = audioManager ?: return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                audioFocusRequest?.let { am.abandonAudioFocusRequest(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                am.abandonAudioFocus(focusChangeListener)
+            }
+        }
+
+        fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
     }
 
     class Play(private val context: Context) : BridgeFunction {
@@ -167,7 +234,9 @@ class AudioFunctions {
                     setDataSource(context, Uri.parse(url))
                     
                     setOnPreparedListener { mp ->
-                        mp.start()
+                        if (requestAudioFocus(context)) {
+                            mp.start()
+                        }
                         updatePlaybackState()
                         AudioService.start(context, metaTitle ?: "Now Playing", metaArtist)
                         sendEvent(context, "PlaybackStarted", mapOf("url" to url))
@@ -226,7 +295,9 @@ class AudioFunctions {
 
     class Resume(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-            mediaPlayer?.start()
+            if (requestAudioFocus(context)) {
+                mediaPlayer?.start()
+            }
             updatePlaybackState()
             AudioService.refreshState(context)
             sendEvent(context, "PlaybackStarted", mapOf("url" to (currentUrl ?: "")))
@@ -239,6 +310,7 @@ class AudioFunctions {
             mediaPlayer?.stop()
             mediaPlayer?.release()
             mediaPlayer = null
+            abandonAudioFocus()
             updatePlaybackState()
             AudioService.stop(context)
             sendEvent(context, "PlaybackStopped", emptyMap())

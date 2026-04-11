@@ -23,7 +23,14 @@ class AudioService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            ACTION_NEXT -> {
+                AudioFunctions.getMediaController(this)?.transportControls?.skipToNext()
+            }
+            ACTION_PREVIOUS -> {
+                AudioFunctions.getMediaController(this)?.transportControls?.skipToPrevious()
+            }
             ACTION_REFRESH_STATE -> {
+
                 refreshNotification()
             }
             else -> {
@@ -82,9 +89,16 @@ class AudioService : Service() {
         )
 
         val sessionToken = AudioFunctions.getSessionToken(this)
+        
+        val prevIntent = Intent(this, AudioService::class.java).apply { action = ACTION_PREVIOUS }
+        val prevPendingIntent = PendingIntent.getService(this, 2, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        
+        val nextIntent = Intent(this, AudioService::class.java).apply { action = ACTION_NEXT }
+        val nextPendingIntent = PendingIntent.getService(this, 3, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
         val style = MediaStyle()
             .setMediaSession(sessionToken)
-            .setShowActionsInCompactView(0) // Show play/pause in compact view
+            .setShowActionsInCompactView(1) // Show only play/pause in compact view
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
@@ -95,6 +109,10 @@ class AudioService : Service() {
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setStyle(style)
+            .addAction(android.R.drawable.ic_media_previous, "Previous", prevPendingIntent)
+            .addAction(android.R.drawable.ic_media_pause, "Pause", null) // Placeholder, we should probably use a toggle intent
+            .addAction(android.R.drawable.ic_media_next, "Next", nextPendingIntent)
+
 
         AudioFunctions.currentArtwork?.let { builder.setLargeIcon(it) }
 
@@ -112,6 +130,9 @@ class AudioService : Service() {
         const val EXTRA_TITLE = "title"
         const val EXTRA_ARTIST = "artist"
         const val ACTION_REFRESH_STATE = "com.theunwindfront.audio.ACTION_REFRESH_STATE"
+        const val ACTION_NEXT = "com.theunwindfront.audio.ACTION_NEXT"
+        const val ACTION_PREVIOUS = "com.theunwindfront.audio.ACTION_PREVIOUS"
+
 
         var currentTitle: String = "Now Playing"
         var currentArtist: String? = null

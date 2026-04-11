@@ -14,13 +14,14 @@ A NativePHP plugin for audio playback on mobile devices.
 
 I'm actively working on the following features and will update the package soon:
 
-- **MediaSession Support** - Send track metadata (artist, title, album, artwork) to Bluetooth devices, lock screens, and OS media centers.
-- **Remote Controls** - Handle playback commands (play, pause, next, previous) from connected devices and headphone buttons.
-- **Audio Focus** - Automatic pausing/ducking when other apps play audio or during incoming calls.
-- **Background Playback** - Enhanced support for playing audio when the app is in the background or the screen is off.
+- **Playlists** - Set a queue of tracks that auto-advance natively.
+- **Sleep Timer** - Schedule playback to stop after a set time.
+- **Playback Rate** - Change audio speed (0.5x to 2x).
 
+... and more!
 
 ## Installation
+
 
 ```bash
 # Install the package
@@ -95,7 +96,10 @@ window.addEventListener('audio-stopped', () => console.log('Stopped'));
 window.addEventListener('audio-completed', (e) => console.log('Completed:', e.detail.url));
 ```
 
+## API Reference
+
 | Method | Returns | Description |
+
 |--------|---------|-------------|
 | `play(string $url)` | `bool` | Play an audio file |
 | `pause()` | `bool` | Pause playback |
@@ -107,21 +111,22 @@ window.addEventListener('audio-completed', (e) => console.log('Completed:', e.de
 | `getCurrentPosition()` | `?float` | Get current position |
 | `setMetadata(array $data)` | `bool` | Set track metadata (lock screen info) |
 
-### MediaSession & Metadata
+### Remote Controls & Events
 
-You can sync track information with the device lock screen, Control Center, and Bluetooth devices:
+The plugin automatically handles remote playback commands (lock screen buttons, headphone controls, Bluetooth devices). You can listen for these events in your application:
 
-```php
-Audio::setMetadata([
-    'title'    => 'Song Title',
-    'artist'   => 'Artist Name',
-    'album'    => 'Album Name',
-    'artwork'  => 'https://example.com/cover.jpg', // Remote URL or local path
-    'duration' => 180.5, // Total duration in seconds
-]);
+```javascript
+window.addEventListener('audio-remote-play', () => console.log('Remote Play'));
+window.addEventListener('audio-remote-pause', () => console.log('Remote Pause'));
+window.addEventListener('audio-remote-next', () => console.log('Remote Next'));
+window.addEventListener('audio-remote-previous', () => console.log('Remote Previous'));
 ```
 
-*Note: On Android, this also enables a rich foreground notification that keeps playback alive when the app is in the background.*
+### Audio Focus & Background Support
+
+- **Audio Focus**: Automatically pauses or ducks (lowers volume) when other apps play audio or during phone calls.
+- **Background Playback**: Full support for background playback on both Android (via Foreground Service) and iOS.
+
 
 
 ## Version Support

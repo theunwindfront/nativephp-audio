@@ -11,7 +11,9 @@ enum AudioFunctions {
     private static var player: AVPlayer?
     private static var playerItem: AVPlayerItem?
     private static var completionObserver: Any?
+    private static var interruptionObserver: Any?
     private static var currentURL: String = ""
+    private static var remoteCommandsRegistered = false
     
     // Metadata state
     private static var metaTitle: String?
@@ -64,6 +66,66 @@ enum AudioFunctions {
         }
     }
 
+    private static func setupRemoteCommands() {
+        guard !remoteCommandsRegistered else { return }
+        remoteCommandsRegistered = true
+        
+        let center = MPRemoteCommandCenter.shared()
+        
+        center.playCommand.isEnabled = true
+        center.playCommand.addTarget { _ in
+            player?.play()
+            syncNowPlayingState()
+            LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\RemotePlayReceived", ["url": currentURL])
+            return .success
+        }
+        
+        center.pauseCommand.isEnabled = true
+        center.pauseCommand.addTarget { _ in
+            player?.pause()
+            syncNowPlayingState()
+            LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\RemotePauseReceived", [:])
+            return .success
+        }
+        
+        center.nextTrackCommand.isEnabled = true
+        center.nextTrackCommand.addTarget { _ in
+            LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\RemoteNextTrackReceived", [:])
+            return .success
+        }
+        
+        center.previousTrackCommand.isEnabled = true
+        center.previousTrackCommand.addTarget { _ in
+            LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\RemotePreviousTrackReceived", [:])
+            return .success
+        }
+    }
+
+    private static func setupAudioSessionObservers() {
+        guard interruptionObserver == nil else { return }
+        
+        interruptionObserver = NotificationCenter.default.addObserver(
+            forName: AVAudioSession.interruptionNotification,
+            object: nil, queue: .main
+        ) { notification in
+            guard let typeValue = notification.userInfo?[AVAudioSessionInterruptionTypeKey] as? UInt,
+                  let type = AVAudioSession.InterruptionType(rawValue: typeValue) else { return }
+            
+            if type == .began {
+                player?.pause()
+                syncNowPlayingState()
+                LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackPaused", [:])
+            } else if type == .ended {
+                if let optionsValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt,
+                   AVAudioSession.InterruptionOptions(rawValue: optionsValue).contains(.shouldResume) {
+                    player?.play()
+                    syncNowPlayingState()
+                    LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStarted", ["url": currentURL])
+                }
+            }
+        }
+    }
+
     // MARK: - Bridge Functions
 
     class Play: BridgeFunction {
@@ -90,6 +152,9 @@ enum AudioFunctions {
                 AudioFunctions.syncNowPlayingState()
                 LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackCompleted", ["url": urlString])
             }
+
+            AudioFunctions.setupRemoteCommands()
+            AudioFunctions.setupAudioSessionObservers()
 
             try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
             try? AVAudioSession.sharedInstance().setActive(true)
