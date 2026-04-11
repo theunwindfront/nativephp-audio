@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool next()
  * @method static bool previous()
  * @method static bool setSleepTimer(int $seconds)
+ * @method static bool setPlaybackRate(float $rate)
+
 
 
  *

@@ -10,17 +10,8 @@ A NativePHP plugin for audio playback on mobile devices.
 - **Volume Control** - Set volume programmatically
 - **Duration/Position** - Get audio duration and current position
 
-## 🚀 Future Roadmap
-
-I'm actively working on the following features and will update the package soon:
-
-- **Playback Rate** - Change audio speed (0.5x to 2x).
-
-
-... and more!
-
-
 ## Installation
+
 
 
 ```bash
@@ -114,8 +105,10 @@ window.addEventListener('audio-completed', (e) => console.log('Completed:', e.de
 | `next()` | `bool` | Skip to next track |
 | `previous()` | `bool` | Skip to previous track |
 | `setSleepTimer(int $seconds)` | `bool` | Stop audio after X seconds |
+| `setPlaybackRate(float $rate)` | `bool` | Change playback speed (0.5-2.0) |
 
 ### Playlists
+
 
 
 You can pass an array of tracks to the native player. The native OS will handle auto-advancing to the next song, which is much more reliable for background playback than handling it in JavaScript:
@@ -141,7 +134,11 @@ Audio::previous();
 
 // Set a sleep timer (e.g., 30 minutes)
 Audio::setSleepTimer(1800);
+
+// Change playback speed (e.g., 1.5x)
+Audio::setPlaybackRate(1.5);
 ```
+
 
 
 

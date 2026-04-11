@@ -79,7 +79,14 @@
             "android": "com.theunwindfront.audio.AudioFunctions.SetSleepTimer",
             "ios": "AudioFunctions.SetSleepTimer",
             "description": "Stop playback after a set number of seconds"
+        },
+        {
+            "name": "Audio.setPlaybackRate",
+            "android": "com.theunwindfront.audio.AudioFunctions.SetPlaybackRate",
+            "ios": "AudioFunctions.SetPlaybackRate",
+            "description": "Change the audio playback speed (e.g., 0.5 to 2.0)"
         }
+
 
 
     ],

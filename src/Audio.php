@@ -245,7 +245,26 @@ class Audio
 
         return false;
     }
+
+    /**
+     * Change the audio playback speed
+     */
+    public function setPlaybackRate(float $rate): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.setPlaybackRate', json_encode(['rate' => $rate]));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
 }
+
 
 
 

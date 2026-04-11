@@ -7,6 +7,7 @@ import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.media.PlaybackParams
 import android.net.Uri
 import android.os.Build
 import android.os.Handler
@@ -43,6 +44,9 @@ class AudioFunctions {
         // Sleep Timer
         private val mainHandler = Handler(Looper.getMainLooper())
         private var sleepTimerRunnable: Runnable? = null
+        
+        // Playback state
+        private var currentPlaybackRate: Float = 1.0f
 
         fun getSessionToken(context: Context): MediaSessionCompat.Token {
             return getOrCreateSession(context).sessionToken
@@ -115,7 +119,7 @@ class AudioFunctions {
                 .setState(
                     if (isPlaying) PlaybackStateCompat.STATE_PLAYING else PlaybackStateCompat.STATE_PAUSED,
                     (mediaPlayer?.currentPosition ?: 0).toLong(),
-                    1.0f
+                    currentPlaybackRate
                 )
                 .build()
             session.setPlaybackState(state)
@@ -270,6 +274,7 @@ class AudioFunctions {
                     setOnPreparedListener { mp ->
                         if (requestAudioFocus(context)) {
                             mp.start()
+                            applyPlaybackRate()
                         }
                         updatePlaybackState()
                         AudioService.start(context, metaTitle ?: "Now Playing", metaArtist)
@@ -301,9 +306,16 @@ class AudioFunctions {
             updatePlaybackState()
             AudioService.stop(context)
             
-            // Cancel sleep timer if active
             sleepTimerRunnable?.let { mainHandler.removeCallbacks(it) }
             sleepTimerRunnable = null
+        }
+
+        private fun applyPlaybackRate() {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                try {
+                    mediaPlayer?.playbackParams = mediaPlayer?.playbackParams?.setSpeed(currentPlaybackRate) ?: PlaybackParams().setSpeed(currentPlaybackRate)
+                } catch (e: Exception) { e.printStackTrace() }
+            }
         }
 
         fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
@@ -389,6 +401,16 @@ class AudioFunctions {
         }
     }
 
+    class SetPlaybackRate(private val context: Context) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val params = JSONObject(parameters)
+            currentPlaybackRate = params.optDouble("rate", 1.0).toFloat()
+            applyPlaybackRate()
+            updatePlaybackState()
+            return mapOf("success" to true)
+        }
+    }
+
     class SetMetadata(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
             val params = JSONObject(parameters)
@@ -429,6 +451,7 @@ class AudioFunctions {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
             if (requestAudioFocus(context)) {
                 mediaPlayer?.start()
+                applyPlaybackRate()
             }
             updatePlaybackState()
             AudioService.refreshState(context)

@@ -22,6 +22,9 @@ enum AudioFunctions {
     // Sleep Timer
     private static var sleepTimer: Timer?
     
+    // Playback state
+    private static var currentPlaybackRate: Float = 1.0
+    
     // Metadata state
     private static var metaTitle: String?
     private static var metaArtist: String?
@@ -82,6 +85,7 @@ enum AudioFunctions {
         center.playCommand.isEnabled = true
         center.playCommand.addTarget { _ in
             player?.play()
+            player?.rate = currentPlaybackRate
             syncNowPlayingState()
             LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\RemotePlayReceived", ["url": currentURL])
             return .success
@@ -128,6 +132,7 @@ enum AudioFunctions {
                 if let optionsValue = notification.userInfo?[AVAudioSessionInterruptionOptionKey] as? UInt,
                    AVAudioSession.InterruptionOptions(rawValue: optionsValue).contains(.shouldResume) {
                     player?.play()
+                    player?.rate = currentPlaybackRate
                     syncNowPlayingState()
                     LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStarted", ["url": currentURL])
                 }
@@ -194,6 +199,7 @@ enum AudioFunctions {
         try? AVAudioSession.sharedInstance().setActive(true)
         
         player?.play()
+        player?.rate = currentPlaybackRate
         syncNowPlayingState()
         
         LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStarted", ["url": urlString])
@@ -209,7 +215,6 @@ enum AudioFunctions {
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
         
-        // Cancel sleep timer
         sleepTimer?.invalidate()
         sleepTimer = nil
     }
@@ -277,6 +282,20 @@ enum AudioFunctions {
         }
     }
 
+    class SetPlaybackRate: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            let rate = (parameters["rate"] as? NSNumber)?.floatValue ?? 1.0
+            AudioFunctions.currentPlaybackRate = rate
+            
+            if AudioFunctions.player?.rate != 0 {
+                AudioFunctions.player?.rate = rate
+            }
+            
+            AudioFunctions.syncNowPlayingState()
+            return BridgeResponse.success(data: ["success": true])
+        }
+    }
+
     class SetMetadata: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {
             AudioFunctions.metaTitle = parameters["title"] as? String
@@ -303,6 +322,7 @@ enum AudioFunctions {
     class Resume: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {
             AudioFunctions.player?.play()
+            AudioFunctions.player?.rate = AudioFunctions.currentPlaybackRate
             AudioFunctions.syncNowPlayingState()
             LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStarted", [:])
             return BridgeResponse.success(data: ["success": true])
