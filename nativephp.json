@@ -73,7 +73,14 @@
             "android": "com.theunwindfront.audio.AudioFunctions.PreviousTrack",
             "ios": "AudioFunctions.PreviousTrack",
             "description": "Skip to the previous track in the active playlist"
+        },
+        {
+            "name": "Audio.setSleepTimer",
+            "android": "com.theunwindfront.audio.AudioFunctions.SetSleepTimer",
+            "ios": "AudioFunctions.SetSleepTimer",
+            "description": "Stop playback after a set number of seconds"
         }
+
 
     ],
 

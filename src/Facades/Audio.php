@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool setPlaylist(array $tracks)
  * @method static bool next()
  * @method static bool previous()
+ * @method static bool setSleepTimer(int $seconds)
+
 
  *
  * @see \Theunwindfront\Audio\Audio

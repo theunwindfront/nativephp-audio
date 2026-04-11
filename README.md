@@ -14,8 +14,8 @@ A NativePHP plugin for audio playback on mobile devices.
 
 I'm actively working on the following features and will update the package soon:
 
-- **Sleep Timer** - Schedule playback to stop after a set time.
 - **Playback Rate** - Change audio speed (0.5x to 2x).
+
 
 ... and more!
 
@@ -113,8 +113,10 @@ window.addEventListener('audio-completed', (e) => console.log('Completed:', e.de
 | `setPlaylist(array $tracks)` | `bool` | Set native playlist queue |
 | `next()` | `bool` | Skip to next track |
 | `previous()` | `bool` | Skip to previous track |
+| `setSleepTimer(int $seconds)` | `bool` | Stop audio after X seconds |
 
 ### Playlists
+
 
 You can pass an array of tracks to the native player. The native OS will handle auto-advancing to the next song, which is much more reliable for background playback than handling it in JavaScript:
 
@@ -136,7 +138,11 @@ Audio::setPlaylist([
 // Navigate manually
 Audio::next();
 Audio::previous();
+
+// Set a sleep timer (e.g., 30 minutes)
+Audio::setSleepTimer(1800);
 ```
+
 
 
 ### Remote Controls & Events

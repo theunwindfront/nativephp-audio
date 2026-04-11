@@ -227,6 +227,25 @@ class Audio
 
         return false;
     }
+
+    /**
+     * Stop playback after a set number of seconds
+     */
+    public function setSleepTimer(int $seconds): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.setSleepTimer', json_encode(['seconds' => $seconds]));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
 }
+
 
 

@@ -40,6 +40,10 @@ class AudioFunctions {
 
         private const val EVENT_PREFIX = "Theunwindfront\\Audio\\Events\\"
 
+        // Sleep Timer
+        private val mainHandler = Handler(Looper.getMainLooper())
+        private var sleepTimerRunnable: Runnable? = null
+
         fun getSessionToken(context: Context): MediaSessionCompat.Token {
             return getOrCreateSession(context).sessionToken
         }
@@ -221,7 +225,6 @@ class AudioFunctions {
             val track = playlist[index]
             val url = track["url"] as String
             
-            // Set metadata from playlist item if available
             metaTitle = track["title"] as? String
             metaArtist = track["artist"] as? String
             metaAlbum = track["album"] as? String
@@ -297,10 +300,29 @@ class AudioFunctions {
             abandonAudioFocus()
             updatePlaybackState()
             AudioService.stop(context)
+            
+            // Cancel sleep timer if active
+            sleepTimerRunnable?.let { mainHandler.removeCallbacks(it) }
+            sleepTimerRunnable = null
         }
 
         fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
         
+        fun setSleepTimer(context: Context, seconds: Int) {
+            sleepTimerRunnable?.let { mainHandler.removeCallbacks(it) }
+            
+            if (seconds <= 0) {
+                sleepTimerRunnable = null
+                return
+            }
+            
+            val runnable = Runnable {
+                stopPlayback(context)
+            }
+            sleepTimerRunnable = runnable
+            mainHandler.postDelayed(runnable, seconds * 1000L)
+        }
+
         private fun JSONObject.toMap(): Map<String, Any> {
             val map = mutableMapOf<String, Any>()
             val keys = this.keys()
@@ -354,6 +376,15 @@ class AudioFunctions {
     class PreviousTrack(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
             playPrevious(context)
+            return mapOf("success" to true)
+        }
+    }
+
+    class SetSleepTimer(private val context: Context) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val params = JSONObject(parameters)
+            val seconds = params.optInt("seconds", 0)
+            setSleepTimer(context, seconds)
             return mapOf("success" to true)
         }
     }

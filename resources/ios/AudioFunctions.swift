@@ -18,6 +18,9 @@ enum AudioFunctions {
     // Playlist state
     private static var playlist: [[String: Any]] = []
     private static var playlistIndex: Int = -1
+
+    // Sleep Timer
+    private static var sleepTimer: Timer?
     
     // Metadata state
     private static var metaTitle: String?
@@ -196,6 +199,21 @@ enum AudioFunctions {
         LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStarted", ["url": urlString])
     }
 
+    private static func stopPlayback() {
+        player?.pause()
+        player = nil
+        playerItem = nil
+        if let observer = completionObserver {
+            NotificationCenter.default.removeObserver(observer)
+            completionObserver = nil
+        }
+        MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+        
+        // Cancel sleep timer
+        sleepTimer?.invalidate()
+        sleepTimer = nil
+    }
+
     // MARK: - Bridge Functions
 
     class Play: BridgeFunction {
@@ -242,6 +260,23 @@ enum AudioFunctions {
         }
     }
 
+    class SetSleepTimer: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            let seconds = (parameters["seconds"] as? NSNumber)?.doubleValue ?? 0.0
+            
+            AudioFunctions.sleepTimer?.invalidate()
+            
+            if seconds > 0 {
+                AudioFunctions.sleepTimer = Timer.scheduledTimer(withTimeInterval: seconds, repeats: false) { _ in
+                    AudioFunctions.stopPlayback()
+                    LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStopped", [:])
+                }
+            }
+            
+            return BridgeResponse.success(data: ["success": true])
+        }
+    }
+
     class SetMetadata: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {
             AudioFunctions.metaTitle = parameters["title"] as? String
@@ -276,14 +311,7 @@ enum AudioFunctions {
 
     class Stop: BridgeFunction {
         func execute(parameters: [String: Any]) throws -> [String: Any] {
-            AudioFunctions.player?.pause()
-            AudioFunctions.player = nil
-            AudioFunctions.playerItem = nil
-            if let observer = AudioFunctions.completionObserver {
-                NotificationCenter.default.removeObserver(observer)
-                AudioFunctions.completionObserver = nil
-            }
-            MPNowPlayingInfoCenter.default().nowPlayingInfo = nil
+            AudioFunctions.stopPlayback()
             LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStopped", [:])
             return BridgeResponse.success(data: ["success": true])
         }
