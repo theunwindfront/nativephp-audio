@@ -49,25 +49,43 @@
             "android": "com.theunwindfront.audio.AudioFunctions.GetCurrentPosition",
             "ios": "AudioFunctions.GetCurrentPosition",
             "description": "Get the current playback position in seconds"
+        },
+        {
+            "name": "Audio.setMetadata",
+            "android": "com.theunwindfront.audio.AudioFunctions.SetMetadata",
+            "ios": "AudioFunctions.SetMetadata",
+            "description": "Set track metadata (title, artist, album, artwork) for lock screens and media centers"
         }
     ],
 
     "android": {
         "min_version": 21,
         "permissions": [
-            "android.permission.INTERNET"
+            "android.permission.INTERNET",
+            "android.permission.FOREGROUND_SERVICE",
+            "android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK",
+            "android.permission.WAKE_LOCK"
         ],
         "dependencies": {
-            "implementation": []
+            "implementation": [
+                "androidx.media:media:1.7.0"
+            ]
         },
         "activities": [],
-        "services": [],
+        "services": [
+            {
+                "name": "com.theunwindfront.audio.AudioService",
+                "foregroundServiceType": "mediaPlayback",
+                "exported": false
+            }
+        ],
         "receivers": [],
         "providers": []
     },
 
     "ios": {
         "min_version": "13.0",
+        "background_modes": ["audio"],
         "info_plist": {
             "NSAppleMusicUsageDescription": "We need access to your music library to play audio files."
         },
@@ -86,3 +104,4 @@
 
     "hooks": {}
 }
+

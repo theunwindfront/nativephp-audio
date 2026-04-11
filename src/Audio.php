@@ -151,4 +151,25 @@ class Audio
 
         return null;
     }
+
+    /**
+     * Set track metadata for lock screens and media centers
+     *
+     * @param  array{title: string, artist?: string, album?: string, artwork?: string, duration?: float}  $metadata
+     */
+    public function setMetadata(array $metadata): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.setMetadata', json_encode($metadata));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
 }
+

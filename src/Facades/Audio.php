@@ -13,8 +13,10 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool setVolume(float $level)
  * @method static float|null getDuration()
  * @method static float|null getCurrentPosition()
+ * @method static bool setMetadata(array $metadata)
  *
  * @see \Theunwindfront\Audio\Audio
+
  */
 class Audio extends Facade
 {

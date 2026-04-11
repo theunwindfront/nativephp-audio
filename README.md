@@ -95,8 +95,6 @@ window.addEventListener('audio-stopped', () => console.log('Stopped'));
 window.addEventListener('audio-completed', (e) => console.log('Completed:', e.detail.url));
 ```
 
-## API Reference
-
 | Method | Returns | Description |
 |--------|---------|-------------|
 | `play(string $url)` | `bool` | Play an audio file |
@@ -107,6 +105,24 @@ window.addEventListener('audio-completed', (e) => console.log('Completed:', e.de
 | `setVolume(float $level)` | `bool` | Set volume (0.0-1.0) |
 | `getDuration()` | `?float` | Get audio duration |
 | `getCurrentPosition()` | `?float` | Get current position |
+| `setMetadata(array $data)` | `bool` | Set track metadata (lock screen info) |
+
+### MediaSession & Metadata
+
+You can sync track information with the device lock screen, Control Center, and Bluetooth devices:
+
+```php
+Audio::setMetadata([
+    'title'    => 'Song Title',
+    'artist'   => 'Artist Name',
+    'album'    => 'Album Name',
+    'artwork'  => 'https://example.com/cover.jpg', // Remote URL or local path
+    'duration' => 180.5, // Total duration in seconds
+]);
+```
+
+*Note: On Android, this also enables a rich foreground notification that keeps playback alive when the app is in the background.*
+
 
 ## Version Support
 
