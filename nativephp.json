@@ -85,10 +85,55 @@
             "android": "com.theunwindfront.audio.AudioFunctions.SetPlaybackRate",
             "ios": "AudioFunctions.SetPlaybackRate",
             "description": "Change the audio playback speed (e.g., 0.5 to 2.0)"
+        },
+        {
+            "name": "Audio.load",
+            "android": "com.theunwindfront.audio.AudioFunctions.Load",
+            "ios": "AudioFunctions.Load",
+            "description": "Load an audio file without starting playback"
+        },
+        {
+            "name": "Audio.getState",
+            "android": "com.theunwindfront.audio.AudioFunctions.GetState",
+            "ios": "AudioFunctions.GetState",
+            "description": "Get the full current playback and playlist state"
+        },
+        {
+            "name": "Audio.setRepeatMode",
+            "android": "com.theunwindfront.audio.AudioFunctions.SetRepeatMode",
+            "ios": "AudioFunctions.SetRepeatMode",
+            "description": "Set repeat mode: none, one, all"
+        },
+        {
+            "name": "Audio.setShuffleMode",
+            "android": "com.theunwindfront.audio.AudioFunctions.SetShuffleMode",
+            "ios": "AudioFunctions.SetShuffleMode",
+            "description": "Enable or disable shuffle mode"
+        },
+        {
+            "name": "Audio.appendTrack",
+            "android": "com.theunwindfront.audio.AudioFunctions.AppendTrack",
+            "ios": "AudioFunctions.AppendTrack",
+            "description": "Add a track to the end of the current playlist"
+        },
+        {
+            "name": "Audio.removeTrack",
+            "android": "com.theunwindfront.audio.AudioFunctions.RemoveTrack",
+            "ios": "AudioFunctions.RemoveTrack",
+            "description": "Remove a track by its index from the current playlist"
+        },
+        {
+            "name": "Audio.setProgressInterval",
+            "android": "com.theunwindfront.audio.AudioFunctions.SetProgressInterval",
+            "ios": "AudioFunctions.SetProgressInterval",
+            "description": "Set how often progress update events fire (in seconds)"
+        },
+        {
+            "name": "Audio.drainEvents",
+            "android": "com.theunwindfront.audio.AudioFunctions.DrainEvents",
+            "ios": "AudioFunctions.DrainEvents",
+            "description": "Clear and return all events queued while in the background"
         }
-
-
-
     ],
 
     "android": {
@@ -129,17 +174,21 @@
     },
 
     "events": [
+        "Theunwindfront\\Audio\\Events\\PlaybackLoaded",
         "Theunwindfront\\Audio\\Events\\PlaybackStarted",
         "Theunwindfront\\Audio\\Events\\PlaybackPaused",
         "Theunwindfront\\Audio\\Events\\PlaybackStopped",
         "Theunwindfront\\Audio\\Events\\PlaybackCompleted",
+        "Theunwindfront\\Audio\\Events\\PlaybackProgressUpdated",
+        "Theunwindfront\\Audio\\Events\\PlaybackBuffering",
+        "Theunwindfront\\Audio\\Events\\PlaybackReady",
         "Theunwindfront\\Audio\\Events\\RemotePlayReceived",
         "Theunwindfront\\Audio\\Events\\RemotePauseReceived",
         "Theunwindfront\\Audio\\Events\\RemoteNextTrackReceived",
-        "Theunwindfront\\Audio\\Events\\RemotePreviousTrackReceived"
+        "Theunwindfront\\Audio\\Events\\RemotePreviousTrackReceived",
+        "Theunwindfront\\Audio\\Events\\PlaylistEnded",
+        "Theunwindfront\\Audio\\Events\\SleepTimerExpired"
     ],
-
 
     "hooks": {}
 }
-

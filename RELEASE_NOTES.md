@@ -1,6 +1,17 @@
 # Release Notes
 
+## [1.1.0] - 2026-04-11
+### Added
+- **Native Shuffle & Repeat**: Added `setShuffleMode` and `setRepeatMode` (none, one, all).
+- **Dynamic Playlists**: Added `appendTrack` and `removeTrack` to modify queues live.
+- **Advanced State Retrieval**: Added `getState()` to get full player/playlist/metadata status in one call.
+- **Custom Progress Frequency**: Added `setProgressInterval()` to control how often progress events fire.
+- **Background Event Draining**: Added `drainEvents()` to sync the UI when returning from the background.
+- **Buffering Detection**: New `PlaybackBuffering` and `PlaybackReady` events.
+- **Track Loading**: Added `load()` to pre-buffer audio without playing.
+
 ## [1.0.4] - 2026-04-11
+
 ### Added
 - **MediaSession Support**: Full track metadata (artist, title, album, artwork) for lock screen and OS control centers.
 - **Remote Controls**: Handle play/pause/next/previous from headphones, Bluetooth, and lock screen buttons.

@@ -7,10 +7,30 @@ class Audio
     /**
      * Play an audio file from a URL or local path
      */
-    public function play(string $url): bool
+    public function play(string $url, array $metadata = []): bool
     {
         if (function_exists('nativephp_call')) {
-            $result = nativephp_call('Audio.play', json_encode(['url' => $url]));
+            $params = array_merge(['url' => $url], $metadata);
+            $result = nativephp_call('Audio.play', json_encode($params));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Load an audio file without starting playback immediately
+     */
+    public function load(string $url, array $metadata = []): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $params = array_merge(['url' => $url], $metadata);
+            $result = nativephp_call('Audio.load', json_encode($params));
 
             if ($result) {
                 $decoded = json_decode($result);
@@ -95,14 +115,10 @@ class Audio
     }
 
     /**
-     * Set the audio volume
-     *
-     * @param  float  $level  Volume level from 0.0 (mute) to 1.0 (maximum)
+     * Set the audio volume (0.0 to 1.0)
      */
     public function setVolume(float $level): bool
     {
-        $level = max(0.0, min(1.0, $level));
-
         if (function_exists('nativephp_call')) {
             $result = nativephp_call('Audio.setVolume', json_encode(['level' => $level]));
 
@@ -127,7 +143,7 @@ class Audio
             if ($result) {
                 $decoded = json_decode($result);
 
-                return isset($decoded->duration) ? (float) $decoded->duration : null;
+                return $decoded->duration ?? null;
             }
         }
 
@@ -145,7 +161,7 @@ class Audio
             if ($result) {
                 $decoded = json_decode($result);
 
-                return isset($decoded->position) ? (float) $decoded->position : null;
+                return $decoded->position ?? null;
             }
         }
 
@@ -153,9 +169,7 @@ class Audio
     }
 
     /**
-     * Set track metadata for lock screens and media centers
-     *
-     * @param  array{title: string, artist?: string, album?: string, artwork?: string, duration?: float}  $metadata
+     * Set track metadata (title, artist, album, artwork, duration)
      */
     public function setMetadata(array $metadata): bool
     {
@@ -173,14 +187,48 @@ class Audio
     }
 
     /**
-     * Set the playlist queue natively
-     *
-     * @param  array<int, array{url: string, title?: string, artist?: string, album?: string, artwork?: string, duration?: float}>  $tracks
+     * Set the playlist queue natively so tracks auto-advance
      */
     public function setPlaylist(array $tracks): bool
     {
         if (function_exists('nativephp_call')) {
             $result = nativephp_call('Audio.setPlaylist', json_encode(['tracks' => $tracks]));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Append a track to the end of the current playlist
+     */
+    public function appendTrack(array $track): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.appendTrack', json_encode($track));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Remove a track from the playlist by its index
+     */
+    public function removeTrack(int $index): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.removeTrack', json_encode(['index' => $index]));
 
             if ($result) {
                 $decoded = json_decode($result);
@@ -229,6 +277,42 @@ class Audio
     }
 
     /**
+     * Set repeat mode: none, one, all
+     */
+    public function setRepeatMode(string $mode): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.setRepeatMode', json_encode(['mode' => $mode]));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Enable or disable shuffle mode
+     */
+    public function setShuffleMode(bool $enabled): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.setShuffleMode', json_encode(['enabled' => $enabled]));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Stop playback after a set number of seconds
      */
     public function setSleepTimer(int $seconds): bool
@@ -263,8 +347,55 @@ class Audio
 
         return false;
     }
+
+    /**
+     * Set how often progress update events fire (in seconds)
+     */
+    public function setProgressInterval(float $seconds): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.setProgressInterval', json_encode(['seconds' => $seconds]));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the full current state of the player and playlist
+     */
+    public function getState(): array
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.getState', '{}');
+
+            if ($result) {
+                return json_decode($result, true) ?? [];
+            }
+        }
+
+        return [];
+    }
+
+    /**
+     * Clear and return all events queued while the app was in the background
+     */
+    public function drainEvents(): array
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.drainEvents', '{}');
+
+            if ($result) {
+                $decoded = json_decode($result, true);
+                return $decoded['events'] ?? [];
+            }
+        }
+
+        return [];
+    }
 }
-
-
-
-
