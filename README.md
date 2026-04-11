@@ -1,6 +1,14 @@
 # NativePHP Audio Player Plugin
 
+<p align="left">
+    <a href="https://packagist.org/packages/theunwindfront/nativephp-audio"><img src="https://img.shields.io/packagist/v/theunwindfront/nativephp-audio" alt="Latest Version on Packagist"></a>
+    <a href="https://packagist.org/packages/theunwindfront/nativephp-audio"><img src="https://img.shields.io/packagist/dt/theunwindfront/nativephp-audio" alt="Total Downloads"></a>
+    <a href="https://packagist.org/packages/theunwindfront/nativephp-audio"><img src="https://img.shields.io/packagist/l/theunwindfront/nativephp-audio" alt="License"></a>
+    <a href="https://github.com/theunwindfront/nativephp-audio/actions"><img src="https://github.com/theunwindfront/nativephp-audio/actions/workflows/main.yml/badge.svg" alt="Build Status"></a>
+</p>
+
 A professional NativePHP plugin for audio playback on mobile devices, supporting background play, playlists, and remote controls.
+
 
 ## Features
 
