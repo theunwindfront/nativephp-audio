@@ -10,17 +10,9 @@ A NativePHP plugin for audio playback on mobile devices.
 - **Volume Control** - Set volume programmatically
 - **Duration/Position** - Get audio duration and current position
 
-## 🚀 Future Roadmap
-
-I'm actively working on the following features and will update the package soon:
-
-- **MediaSession Support** - Send track metadata (artist, title, album, artwork) to Bluetooth devices, lock screens, and OS media centers.
-- **Remote Controls** - Handle playback commands (play, pause, next, previous) from connected devices and headphone buttons.
-- **Audio Focus** - Automatic pausing/ducking when other apps play audio or during incoming calls.
-- **Background Playback** - Enhanced support for playing audio when the app is in the background or the screen is off.
-
-
 ## Installation
+
+
 
 ```bash
 # Install the package
@@ -98,6 +90,7 @@ window.addEventListener('audio-completed', (e) => console.log('Completed:', e.de
 ## API Reference
 
 | Method | Returns | Description |
+
 |--------|---------|-------------|
 | `play(string $url)` | `bool` | Play an audio file |
 | `pause()` | `bool` | Pause playback |
@@ -107,6 +100,66 @@ window.addEventListener('audio-completed', (e) => console.log('Completed:', e.de
 | `setVolume(float $level)` | `bool` | Set volume (0.0-1.0) |
 | `getDuration()` | `?float` | Get audio duration |
 | `getCurrentPosition()` | `?float` | Get current position |
+| `setMetadata(array $data)` | `bool` | Set track metadata (lock screen info) |
+| `setPlaylist(array $tracks)` | `bool` | Set native playlist queue |
+| `next()` | `bool` | Skip to next track |
+| `previous()` | `bool` | Skip to previous track |
+| `setSleepTimer(int $seconds)` | `bool` | Stop audio after X seconds |
+| `setPlaybackRate(float $rate)` | `bool` | Change playback speed (0.5-2.0) |
+
+### Playlists
+
+
+
+You can pass an array of tracks to the native player. The native OS will handle auto-advancing to the next song, which is much more reliable for background playback than handling it in JavaScript:
+
+```php
+Audio::setPlaylist([
+    [
+        'url' => 'https://example.com/song1.mp3',
+        'title' => 'Song One',
+        'artist' => 'Artist A',
+        'artwork' => 'https://example.com/cover1.jpg'
+    ],
+    [
+        'url' => 'https://example.com/song2.mp3',
+        'title' => 'Song Two',
+        'artist' => 'Artist B'
+    ]
+]);
+
+// Navigate manually
+Audio::next();
+Audio::previous();
+
+// Set a sleep timer (e.g., 30 minutes)
+Audio::setSleepTimer(1800);
+
+// Change playback speed (e.g., 1.5x)
+Audio::setPlaybackRate(1.5);
+```
+
+
+
+
+### Remote Controls & Events
+
+The plugin automatically handles remote playback commands (lock screen buttons, headphone controls, Bluetooth devices). You can listen for these events in your application:
+
+
+```javascript
+window.addEventListener('audio-remote-play', () => console.log('Remote Play'));
+window.addEventListener('audio-remote-pause', () => console.log('Remote Pause'));
+window.addEventListener('audio-remote-next', () => console.log('Remote Next'));
+window.addEventListener('audio-remote-previous', () => console.log('Remote Previous'));
+```
+
+### Audio Focus & Background Support
+
+- **Audio Focus**: Automatically pauses or ducks (lowers volume) when other apps play audio or during phone calls.
+- **Background Playback**: Full support for background playback on both Android (via Foreground Service) and iOS.
+
+
 
 ## Version Support
 

@@ -1,4 +1,14 @@
-## 🚧 Coming Soon (v1.1.0)
+# Release Notes
+
+## [1.0.4] - 2026-04-11
+### Added
+- **MediaSession Support**: Full track metadata (artist, title, album, artwork) for lock screen and OS control centers.
+- **Remote Controls**: Handle play/pause/next/previous from headphones, Bluetooth, and lock screen buttons.
+- **Audio Focus**: Automated pausing/ducking during phone calls or when other apps play audio.
+- **Background Playback**: Improved reliability with Android foreground service and iOS background modes.
+- **Native Playlists**: Added `setPlaylist`, `next()`, and `previous()` for reliable native track transitions.
+- **Sleep Timer**: Schedule automatic stopping of playback.
+- **Playback Rate**: Adjust audio speed (0.5x to 2x).
 
 - **MediaSession Support**: Full track metadata (artist, title, album, etc.) on Bluetooth devices and OS media controls.
 - **Remote Control Commands**: Handle play/pause/prev/next from headphones and lock screens.
