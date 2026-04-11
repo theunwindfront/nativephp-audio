@@ -17,6 +17,7 @@ import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import com.nativephp.mobile.bridge.BridgeFunction
 import com.nativephp.mobile.utils.NativeActionCoordinator
+import org.json.JSONArray
 import org.json.JSONObject
 import java.net.URL
 
@@ -33,6 +34,9 @@ class AudioFunctions {
         private var metaAlbum: String? = null
         private var metaDurationMs: Long? = null
         private var currentUrl: String? = null
+
+        private var playlist: MutableList<Map<String, Any>> = mutableListOf()
+        private var playlistIndex: Int = -1
 
         private const val EVENT_PREFIX = "Theunwindfront\\Audio\\Events\\"
 
@@ -67,12 +71,7 @@ class AudioFunctions {
                     }
 
                     override fun onStop() {
-                        mediaPlayer?.stop()
-                        mediaPlayer?.release()
-                        mediaPlayer = null
-                        abandonAudioFocus()
-                        updatePlaybackState()
-                        AudioService.stop(context)
+                        stopPlayback(context)
                         sendEvent(context, "PlaybackStopped", emptyMap())
                     }
 
@@ -82,10 +81,12 @@ class AudioFunctions {
                     }
 
                     override fun onSkipToNext() {
+                        playNext(context)
                         sendEvent(context, "RemoteNextTrackReceived", emptyMap())
                     }
 
                     override fun onSkipToPrevious() {
+                        playPrevious(context)
                         sendEvent(context, "RemotePreviousTrackReceived", emptyMap())
                     }
                 })
@@ -211,15 +212,45 @@ class AudioFunctions {
             }
         }
 
-        fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
-    }
+        // --- Playlist / Playback Controls ---
 
-    class Play(private val context: Context) : BridgeFunction {
-        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-            val params = JSONObject(parameters)
-            val url = params.optString("url")
+        fun playTrackAt(context: Context, index: Int) {
+            if (index < 0 || index >= playlist.size) return
+            
+            playlistIndex = index
+            val track = playlist[index]
+            val url = track["url"] as String
+            
+            // Set metadata from playlist item if available
+            metaTitle = track["title"] as? String
+            metaArtist = track["artist"] as? String
+            metaAlbum = track["album"] as? String
+            metaDurationMs = (track["duration"] as? Number)?.let { (it.toDouble() * 1000).toLong() }
+            currentArtwork = null
+            
+            val artworkUrl = track["artwork"] as? String
+            if (artworkUrl != null) {
+                loadArtworkAsync(context, artworkUrl)
+            }
+            
+            applyMetadata(context)
+            startPlaying(context, url)
+        }
+
+        fun playNext(context: Context) {
+            if (playlistIndex < playlist.size - 1) {
+                playTrackAt(context, playlistIndex + 1)
+            }
+        }
+
+        fun playPrevious(context: Context) {
+            if (playlistIndex > 0) {
+                playTrackAt(context, playlistIndex - 1)
+            }
+        }
+
+        private fun startPlaying(context: Context, url: String) {
             currentUrl = url
-
             try {
                 mediaPlayer?.stop()
                 mediaPlayer?.release()
@@ -244,16 +275,86 @@ class AudioFunctions {
                     
                     setOnCompletionListener {
                         updatePlaybackState()
-                        AudioService.stop(context)
                         sendEvent(context, "PlaybackCompleted", mapOf("url" to url))
+                        if (playlistIndex < playlist.size - 1) {
+                            playNext(context)
+                        } else {
+                            AudioService.stop(context)
+                        }
                     }
                     
                     prepareAsync()
                 }
-                return mapOf("success" to true)
             } catch (e: Exception) {
-                return mapOf("success" to false, "error" to (e.message ?: "Unknown error"))
+                e.printStackTrace()
             }
+        }
+
+        private fun stopPlayback(context: Context) {
+            mediaPlayer?.stop()
+            mediaPlayer?.release()
+            mediaPlayer = null
+            abandonAudioFocus()
+            updatePlaybackState()
+            AudioService.stop(context)
+        }
+
+        fun isPlaying(): Boolean = mediaPlayer?.isPlaying == true
+        
+        private fun JSONObject.toMap(): Map<String, Any> {
+            val map = mutableMapOf<String, Any>()
+            val keys = this.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                map[key] = this.get(key)
+            }
+            return map
+        }
+    }
+
+    class Play(private val context: Context) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val params = JSONObject(parameters)
+            val url = params.optString("url")
+            
+            playlist.clear()
+            playlistIndex = -1
+            
+            startPlaying(context, url)
+            return mapOf("success" to true)
+        }
+    }
+
+    class SetPlaylist(private val context: Context) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val params = JSONObject(parameters)
+            val tracksArray = params.optJSONArray("tracks") ?: JSONArray()
+            
+            playlist.clear()
+            for (i in 0 until tracksArray.length()) {
+                val trackObj = tracksArray.getJSONObject(i)
+                playlist.add(trackObj.toMap())
+            }
+            
+            if (playlist.isNotEmpty()) {
+                playTrackAt(context, 0)
+            }
+            
+            return mapOf("success" to true)
+        }
+    }
+
+    class NextTrack(private val context: Context) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            playNext(context)
+            return mapOf("success" to true)
+        }
+    }
+
+    class PreviousTrack(private val context: Context) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            playPrevious(context)
+            return mapOf("success" to true)
         }
     }
 
@@ -307,12 +408,7 @@ class AudioFunctions {
 
     class Stop(private val context: Context) : BridgeFunction {
         override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-            mediaPlayer?.stop()
-            mediaPlayer?.release()
-            mediaPlayer = null
-            abandonAudioFocus()
-            updatePlaybackState()
-            AudioService.stop(context)
+            stopPlayback(context)
             sendEvent(context, "PlaybackStopped", emptyMap())
             return mapOf("success" to true)
         }

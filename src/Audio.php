@@ -171,5 +171,62 @@ class Audio
 
         return false;
     }
+
+    /**
+     * Set the playlist queue natively
+     *
+     * @param  array<int, array{url: string, title?: string, artist?: string, album?: string, artwork?: string, duration?: float}>  $tracks
+     */
+    public function setPlaylist(array $tracks): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.setPlaylist', json_encode(['tracks' => $tracks]));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Skip to the next track in the playlist
+     */
+    public function next(): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.nextTrack', '{}');
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Skip to the previous track in the playlist
+     */
+    public function previous(): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.previousTrack', '{}');
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
 }
+
 

@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\Facade;
  * @method static float|null getDuration()
  * @method static float|null getCurrentPosition()
  * @method static bool setMetadata(array $metadata)
+ * @method static bool setPlaylist(array $tracks)
+ * @method static bool next()
+ * @method static bool previous()
+
  *
  * @see \Theunwindfront\Audio\Audio
 

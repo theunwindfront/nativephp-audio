@@ -15,6 +15,10 @@ enum AudioFunctions {
     private static var currentURL: String = ""
     private static var remoteCommandsRegistered = false
     
+    // Playlist state
+    private static var playlist: [[String: Any]] = []
+    private static var playlistIndex: Int = -1
+    
     // Metadata state
     private static var metaTitle: String?
     private static var metaArtist: String?
@@ -90,12 +94,14 @@ enum AudioFunctions {
         
         center.nextTrackCommand.isEnabled = true
         center.nextTrackCommand.addTarget { _ in
+            playNext()
             LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\RemoteNextTrackReceived", [:])
             return .success
         }
         
         center.previousTrackCommand.isEnabled = true
         center.previousTrackCommand.addTarget { _ in
+            playPrevious()
             LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\RemotePreviousTrackReceived", [:])
             return .success
         }
@@ -125,6 +131,70 @@ enum AudioFunctions {
             }
         }
     }
+    
+    // MARK: - Playlist logic
+    
+    static func playTrackAt(index: Int) {
+        guard index >= 0 && index < playlist.count else { return }
+        
+        playlistIndex = index
+        let track = playlist[index]
+        guard let urlString = track["url"] as? String,
+              let url = URL(string: urlString) else { return }
+        
+        metaTitle = track["title"] as? String
+        metaArtist = track["artist"] as? String
+        metaAlbum = track["album"] as? String
+        metaDuration = (track["duration"] as? NSNumber)?.doubleValue
+        metaArtwork = track["artwork"] as? String
+        
+        startPlayback(url: url, urlString: urlString)
+    }
+    
+    static func playNext() {
+        if playlistIndex < playlist.count - 1 {
+            playTrackAt(index: playlistIndex + 1)
+        }
+    }
+    
+    static func playPrevious() {
+        if playlistIndex > 0 {
+            playTrackAt(index: playlistIndex - 1)
+        }
+    }
+    
+    private static func startPlayback(url: URL, urlString: String) {
+        currentURL = urlString
+        
+        if let observer = completionObserver {
+            NotificationCenter.default.removeObserver(observer)
+        }
+
+        playerItem = AVPlayerItem(url: url)
+        player = AVPlayer(playerItem: playerItem)
+
+        completionObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: playerItem,
+            queue: .main
+        ) { _ in
+            LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackCompleted", ["url": urlString])
+            if playlistIndex < playlist.count - 1 {
+                playNext()
+            }
+        }
+
+        setupRemoteCommands()
+        setupAudioSessionObservers()
+
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
+        try? AVAudioSession.sharedInstance().setActive(true)
+        
+        player?.play()
+        syncNowPlayingState()
+        
+        LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStarted", ["url": urlString])
+    }
 
     // MARK: - Bridge Functions
 
@@ -135,35 +205,39 @@ enum AudioFunctions {
                 return BridgeResponse.error(code: "INVALID_PARAMETERS", message: "URL is required and must be valid.")
             }
 
-            AudioFunctions.currentURL = urlString
-            
-            if let observer = AudioFunctions.completionObserver {
-                NotificationCenter.default.removeObserver(observer)
+            AudioFunctions.playlist = []
+            AudioFunctions.playlistIndex = -1
+            AudioFunctions.startPlayback(url: url, urlString: urlString)
+
+            return BridgeResponse.success(data: ["success": true])
+        }
+    }
+
+    class SetPlaylist: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            guard let tracks = parameters["tracks"] as? [[String: Any]] else {
+                return BridgeResponse.error(code: "INVALID_PARAMETERS", message: "Tracks array is required.")
             }
-
-            AudioFunctions.playerItem = AVPlayerItem(url: url)
-            AudioFunctions.player = AVPlayer(playerItem: AudioFunctions.playerItem)
-
-            AudioFunctions.completionObserver = NotificationCenter.default.addObserver(
-                forName: .AVPlayerItemDidPlayToEndTime,
-                object: AudioFunctions.playerItem,
-                queue: .main
-            ) { _ in
-                AudioFunctions.syncNowPlayingState()
-                LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackCompleted", ["url": urlString])
+            
+            AudioFunctions.playlist = tracks
+            if !tracks.isEmpty {
+                AudioFunctions.playTrackAt(index: 0)
             }
-
-            AudioFunctions.setupRemoteCommands()
-            AudioFunctions.setupAudioSessionObservers()
-
-            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
-            try? AVAudioSession.sharedInstance().setActive(true)
             
-            AudioFunctions.player?.play()
-            AudioFunctions.syncNowPlayingState()
-            
-            LaravelBridge.shared.send?("Theunwindfront\\Audio\\Events\\PlaybackStarted", ["url": urlString])
+            return BridgeResponse.success(data: ["success": true])
+        }
+    }
 
+    class NextTrack: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            AudioFunctions.playNext()
+            return BridgeResponse.success(data: ["success": true])
+        }
+    }
+
+    class PreviousTrack: BridgeFunction {
+        func execute(parameters: [String: Any]) throws -> [String: Any] {
+            AudioFunctions.playPrevious()
             return BridgeResponse.success(data: ["success": true])
         }
     }

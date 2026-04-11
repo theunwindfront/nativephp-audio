@@ -55,7 +55,26 @@
             "android": "com.theunwindfront.audio.AudioFunctions.SetMetadata",
             "ios": "AudioFunctions.SetMetadata",
             "description": "Set track metadata (title, artist, album, artwork) for lock screens and media centers"
+        },
+        {
+            "name": "Audio.setPlaylist",
+            "android": "com.theunwindfront.audio.AudioFunctions.SetPlaylist",
+            "ios": "AudioFunctions.SetPlaylist",
+            "description": "Set the playlist queue natively so tracks can auto-advance"
+        },
+        {
+            "name": "Audio.nextTrack",
+            "android": "com.theunwindfront.audio.AudioFunctions.NextTrack",
+            "ios": "AudioFunctions.NextTrack",
+            "description": "Skip to the next track in the active playlist"
+        },
+        {
+            "name": "Audio.previousTrack",
+            "android": "com.theunwindfront.audio.AudioFunctions.PreviousTrack",
+            "ios": "AudioFunctions.PreviousTrack",
+            "description": "Skip to the previous track in the active playlist"
         }
+
     ],
 
     "android": {

@@ -14,11 +14,11 @@ A NativePHP plugin for audio playback on mobile devices.
 
 I'm actively working on the following features and will update the package soon:
 
-- **Playlists** - Set a queue of tracks that auto-advance natively.
 - **Sleep Timer** - Schedule playback to stop after a set time.
 - **Playback Rate** - Change audio speed (0.5x to 2x).
 
 ... and more!
+
 
 ## Installation
 
@@ -110,10 +110,39 @@ window.addEventListener('audio-completed', (e) => console.log('Completed:', e.de
 | `getDuration()` | `?float` | Get audio duration |
 | `getCurrentPosition()` | `?float` | Get current position |
 | `setMetadata(array $data)` | `bool` | Set track metadata (lock screen info) |
+| `setPlaylist(array $tracks)` | `bool` | Set native playlist queue |
+| `next()` | `bool` | Skip to next track |
+| `previous()` | `bool` | Skip to previous track |
+
+### Playlists
+
+You can pass an array of tracks to the native player. The native OS will handle auto-advancing to the next song, which is much more reliable for background playback than handling it in JavaScript:
+
+```php
+Audio::setPlaylist([
+    [
+        'url' => 'https://example.com/song1.mp3',
+        'title' => 'Song One',
+        'artist' => 'Artist A',
+        'artwork' => 'https://example.com/cover1.jpg'
+    ],
+    [
+        'url' => 'https://example.com/song2.mp3',
+        'title' => 'Song Two',
+        'artist' => 'Artist B'
+    ]
+]);
+
+// Navigate manually
+Audio::next();
+Audio::previous();
+```
+
 
 ### Remote Controls & Events
 
 The plugin automatically handles remote playback commands (lock screen buttons, headphone controls, Bluetooth devices). You can listen for these events in your application:
+
 
 ```javascript
 window.addEventListener('audio-remote-play', () => console.log('Remote Play'));
