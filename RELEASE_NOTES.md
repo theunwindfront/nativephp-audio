@@ -1,6 +1,11 @@
 # Release Notes
 
-## [1.1.1] - 2026-04-12
+## [1.1.2] - 2026-04-12
+### Added
+- **Events**: Added `PlaybackBuffering`, `PlaybackProgressUpdated`, `PlaybackStateChanged`, and `PlaylistEnded` events for better UI synchronization.
+### Fixed
+- **Android**: Fixed bridge function visibility and static access for improved reliability in the Kotlin bridge.
+
 ### Fixed
 - **Android**: Fixed activity reference leaks using WeakReference.
 - **Android**: Improved stability of the background service and media session handling.
