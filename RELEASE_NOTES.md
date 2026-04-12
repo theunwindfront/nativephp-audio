@@ -1,5 +1,11 @@
 # Release Notes
 
+## [1.1.1] - 2026-04-12
+### Fixed
+- **Android**: Fixed activity reference leaks using WeakReference.
+- **Android**: Improved stability of the background service and media session handling.
+- **Android**: Added `MediaControllerCompat` support for better cross-device compatibility.
+
 ## [1.1.0] - 2026-04-11
 ### Added
 - **Native Shuffle & Repeat**: Added `setShuffleMode` and `setRepeatMode` (none, one, all).

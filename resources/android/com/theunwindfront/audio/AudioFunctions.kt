@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.fragment.app.FragmentActivity
@@ -33,42 +34,42 @@ import kotlin.math.min
  */
 class AudioFunctions {
     companion object {
-        private var mediaPlayer: MediaPlayer? = null
-        private var mediaSession: MediaSessionCompat? = null
-        private var activityRef: WeakReference<FragmentActivity>? = null
-        private var appContext: Context? = null
+        internal var mediaPlayer: MediaPlayer? = null
+        internal var mediaSession: MediaSessionCompat? = null
+        internal var activityRef: WeakReference<FragmentActivity>? = null
+        internal var appContext: Context? = null
 
         // ── State Management ──────────────────────────────────────────────────
-        private var currentUrl: String = ""
-        private var metaTitle: String? = null
-        private var metaArtist: String? = null
-        private var metaAlbum: String? = null
-        private var metaDurationMs: Long? = null
-        private var metaArtworkSource: String? = null
+        internal var currentUrl: String = ""
+        internal var metaTitle: String? = null
+        internal var metaArtist: String? = null
+        internal var metaAlbum: String? = null
+        internal var metaDurationMs: Long? = null
+        internal var metaArtworkSource: String? = null
         internal var currentArtwork: Bitmap? = null
 
         // Playlist state
-        private val playlist: MutableList<Map<String, Any>> = mutableListOf()
-        private var playlistIndex: Int = -1
-        private var repeatMode: String = "none" // none, one, all
-        private var shuffleMode: Boolean = false
-        private var shuffledOrder: MutableList<Int> = mutableListOf()
+        internal val playlist: MutableList<Map<String, Any>> = mutableListOf()
+        internal var playlistIndex: Int = -1
+        internal var repeatMode: String = "none" // none, one, all
+        internal var shuffleMode: Boolean = false
+        internal var shuffledOrder: MutableList<Int> = mutableListOf()
 
         // Sync & Buffering
-        private var isBuffering: Boolean = false
-        private var isInBackground: Boolean = false
-        private val pendingEvents: MutableList<Map<String, Any>> = mutableListOf()
-        private var playbackRate: Float = 1.0f
-        private var progressIntervalMs: Long = 1000L // 1 second default
+        internal var isBuffering: Boolean = false
+        internal var isInBackground: Boolean = false
+        internal val pendingEvents: MutableList<Map<String, Any>> = mutableListOf()
+        internal var playbackRate: Float = 1.0f
+        internal var progressIntervalMs: Long = 1000L // 1 second default
 
         // Timers & Audio Focus
-        private var progressHandler: Handler? = null
-        private var progressRunnable: Runnable? = null
-        private var sleepTimerHandler: Handler? = null
-        private var sleepTimerRunnable: Runnable? = null
-        private var audioManager: AudioManager? = null
-        private var audioFocusRequest: AudioFocusRequest? = null
-        private var pausedByFocusLoss = false
+        internal var progressHandler: Handler? = null
+        internal var progressRunnable: Runnable? = null
+        internal var sleepTimerHandler: Handler? = null
+        internal var sleepTimerRunnable: Runnable? = null
+        internal var audioManager: AudioManager? = null
+        internal var audioFocusRequest: AudioFocusRequest? = null
+        internal var pausedByFocusLoss = false
 
         init {
             NativePHPLifecycle.on(NativePHPLifecycle.Events.ON_RESUME) { isInBackground = false }
@@ -122,13 +123,13 @@ class AudioFunctions {
             session.setPlaybackState(state)
         }
 
-        private fun syncNowPlaying(context: Context) {
+        internal fun syncNowPlaying(context: Context) {
             val session = getOrCreateSession(context)
             session.setMetadata(buildMetadata())
             updateSessionState()
         }
 
-        fun getOrCreateSession(context: Context): MediaSessionCompat {
+        internal fun getOrCreateSession(context: Context): MediaSessionCompat {
             mediaSession?.let { return it }
             val session = MediaSessionCompat(context, "NativePHPAudio")
             session.isActive = true
@@ -146,9 +147,11 @@ class AudioFunctions {
 
         fun getSessionToken(context: Context): MediaSessionCompat.Token = getOrCreateSession(context).sessionToken
 
+        fun getMediaController(context: Context): MediaControllerCompat? = mediaSession?.controller
+
         // ── Player Commands ───────────────────────────────────────────────────
 
-        private fun togglePlay(play: Boolean) {
+        internal fun togglePlay(play: Boolean) {
             if (play) {
                 mediaPlayer?.start()
                 applyRate()
@@ -163,12 +166,12 @@ class AudioFunctions {
             appContext?.let { AudioService.refreshState(it) }
         }
 
-        private fun seekTo(seconds: Double) {
+        internal fun seekTo(seconds: Double) {
             mediaPlayer?.seekTo((seconds * 1000).toInt())
             updateSessionState()
         }
 
-        private fun stopPlayback() {
+        internal fun stopPlayback() {
             mediaPlayer?.stop()
             mediaPlayer?.release()
             mediaPlayer = null
@@ -179,7 +182,7 @@ class AudioFunctions {
             sendEvent("PlaybackStopped", emptyMap())
         }
 
-        private fun applyRate() {
+        internal fun applyRate() {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 try {
                     mediaPlayer?.playbackParams = PlaybackParams().setSpeed(playbackRate)
@@ -246,12 +249,12 @@ class AudioFunctions {
             return shuffledOrder.getOrNull(index) ?: index
         }
 
-        private fun regenerateShuffleOrder() {
+        internal fun regenerateShuffleOrder() {
             shuffledOrder = (0 until playlist.size).toMutableList()
             if (shuffleMode) shuffledOrder.shuffle()
         }
 
-        private fun playTrackAt(index: Int) {
+        internal fun playTrackAt(index: Int) {
             if (index < 0 || index >= playlist.size) return
             playlistIndex = index
             val track = playlist[getLogicalIndex(index)]
@@ -268,7 +271,7 @@ class AudioFunctions {
             prepareAndPlay(url)
         }
 
-        fun playNext() {
+        internal fun playNext() {
             if (playlist.isEmpty()) return
             when (repeatMode) {
                 "one" -> playTrackAt(playlistIndex)
@@ -277,7 +280,7 @@ class AudioFunctions {
             }
         }
 
-        fun playPrevious() {
+        internal fun playPrevious() {
             if (playlist.isNotEmpty() && playlistIndex > 0) playTrackAt(playlistIndex - 1)
         }
 
@@ -355,7 +358,7 @@ class AudioFunctions {
 
         // ── Timers ────────────────────────────────────────────────────────────
 
-        private fun startProgressTimer() {
+        internal fun startProgressTimer() {
             stopProgressTimer()
             val handler = Handler(Looper.getMainLooper())
             progressHandler = handler
@@ -374,19 +377,20 @@ class AudioFunctions {
             handler.postDelayed(runnable, progressIntervalMs)
         }
 
-        private fun stopProgressTimer() {
+        internal fun stopProgressTimer() {
             progressRunnable?.let { progressHandler?.removeCallbacks(it) }
             progressHandler = null
             progressRunnable = null
         }
 
-        private fun cancelSleepTimer() {
+        internal fun cancelSleepTimer() {
             sleepTimerRunnable?.let { sleepTimerHandler?.removeCallbacks(it) }
             sleepTimerHandler = null
             sleepTimerRunnable = null
         }
+    }
 
-        // ── Bridge Functions ──────────────────────────────────────────────────
+    // ── Bridge Functions ──────────────────────────────────────────────────
 
         class Play(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
@@ -418,8 +422,10 @@ class AudioFunctions {
             }
         }
 
-        class GetState : BridgeFunction {
+        class GetState(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 return mapOf(
                     "url" to currentUrl,
                     "position" to (mediaPlayer?.currentPosition ?: 0) / 1000.0,
@@ -456,16 +462,36 @@ class AudioFunctions {
             }
         }
 
-        class AppendTrack : BridgeFunction {
+        class NextTrack(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
+                playNext()
+                return mapOf("success" to true)
+            }
+        }
+        class PreviousTrack(private val activity: FragmentActivity) : BridgeFunction {
+            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
+                playPrevious()
+                return mapOf("success" to true)
+            }
+        }
+        class AppendTrack(private val activity: FragmentActivity) : BridgeFunction {
+            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 playlist.add(parameters)
                 regenerateShuffleOrder()
                 return mapOf("success" to true)
             }
         }
 
-        class RemoveTrack : BridgeFunction {
+        class RemoveTrack(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 val index = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
                 if (index in playlist.indices) {
                     playlist.removeAt(index)
@@ -475,23 +501,29 @@ class AudioFunctions {
             }
         }
 
-        class SetRepeatMode : BridgeFunction {
+        class SetRepeatMode(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 repeatMode = parameters["mode"] as? String ?: "none"
                 return mapOf("success" to true)
             }
         }
 
-        class SetShuffleMode : BridgeFunction {
+        class SetShuffleMode(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 shuffleMode = parameters["enabled"] as? Boolean ?: false
                 regenerateShuffleOrder()
                 return mapOf("success" to true)
             }
         }
 
-        class SetProgressInterval : BridgeFunction {
+        class SetProgressInterval(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 val seconds = (parameters["seconds"] as? Number)?.toDouble() ?: 1.0
                 progressIntervalMs = (seconds * 1000).toLong()
                 if (mediaPlayer?.isPlaying == true) startProgressTimer()
@@ -499,8 +531,10 @@ class AudioFunctions {
             }
         }
 
-        class DrainEvents : BridgeFunction {
+        class DrainEvents(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 val events = JSONArray()
                 pendingEvents.forEach { events.put(JSONObject(it)) }
                 pendingEvents.clear()
@@ -509,47 +543,69 @@ class AudioFunctions {
         }
 
         // Standard controls
-        class Pause(private val context: Context) : BridgeFunction {
+        class Pause(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 togglePlay(false); return mapOf("success" to true)
             }
         }
-        class Resume(private val context: Context) : BridgeFunction {
+        class Resume(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 togglePlay(true); return mapOf("success" to true)
             }
         }
-        class Stop(private val context: Context) : BridgeFunction {
+        class Stop(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 stopPlayback(); return mapOf("success" to true)
             }
         }
-        class Seek : BridgeFunction {
+        class Seek(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 val sec = (parameters["seconds"] as? Number)?.toDouble() ?: 0.0
                 seekTo(sec); return mapOf("success" to true)
             }
         }
-        class SetVolume : BridgeFunction {
+        class SetVolume(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 val lv = (parameters["level"] as? Number)?.toFloat() ?: 1.0f
                 mediaPlayer?.setVolume(lv, lv); return mapOf("success" to true)
             }
         }
-        class SetPlaybackRate : BridgeFunction {
+        class SetPlaybackRate(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 playbackRate = (parameters["rate"] as? Number)?.toFloat() ?: 1.0f
                 applyRate(); updateSessionState(); return mapOf("success" to true)
             }
         }
-        class GetDuration : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> = mapOf("duration" to (mediaPlayer?.duration ?: 0) / 1000.0)
-        }
-        class GetCurrentPosition : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> = mapOf("position" to (mediaPlayer?.currentPosition ?: 0) / 1000.0)
-        }
-        class SetSleepTimer : BridgeFunction {
+        class GetDuration(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
+                return mapOf("duration" to (mediaPlayer?.duration ?: 0) / 1000.0)
+            }
+        }
+        class GetCurrentPosition(private val activity: FragmentActivity) : BridgeFunction {
+            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
+                return mapOf("position" to (mediaPlayer?.currentPosition ?: 0) / 1000.0)
+            }
+        }
+        class SetSleepTimer(private val activity: FragmentActivity) : BridgeFunction {
+            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
                 val sec = (parameters["seconds"] as? Number)?.toLong() ?: 0L
                 cancelSleepTimer()
                 if (sec > 0) {
@@ -573,5 +629,4 @@ class AudioFunctions {
                 return mapOf("success" to true)
             }
         }
-    }
 }
