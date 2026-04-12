@@ -187,7 +187,9 @@
         "Theunwindfront\\Audio\\Events\\RemoteNextTrackReceived",
         "Theunwindfront\\Audio\\Events\\RemotePreviousTrackReceived",
         "Theunwindfront\\Audio\\Events\\PlaylistEnded",
-        "Theunwindfront\\Audio\\Events\\SleepTimerExpired"
+        "Theunwindfront\\Audio\\Events\\SleepTimerExpired",
+        "Theunwindfront\\Audio\\Events\\PlaybackFailed",
+        "Theunwindfront\\Audio\\Events\\PlaybackStateChanged"
     ],
 
     "hooks": {}
