@@ -9,6 +9,12 @@
             "description": "Play an audio file from a URL or local path"
         },
         {
+            "name": "Audio.playTrackAt",
+            "android": "com.theunwindfront.audio.AudioFunctions.PlayTrackAt",
+            "ios": "AudioFunctions.PlayTrackAt",
+            "description": "Play a specific track from the native playlist by its index"
+        },
+        {
             "name": "Audio.pause",
             "android": "com.theunwindfront.audio.AudioFunctions.Pause",
             "ios": "AudioFunctions.Pause",

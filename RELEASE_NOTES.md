@@ -1,6 +1,10 @@
 # Release Notes
 
-## [1.1.3] - 2026-04-12
+## [1.1.4] - 2026-04-12
+### Added
+- **API**: Added `playTrackAt($index)` to specifically play a track by its position in the native playlist.
+- **Bridge**: Registered `Audio.playTrackAt` in `nativephp.json`.
+
 ### Fixed
 - **Android**: Critical hotfix for corrupted Kotlin bridge file.
 - **Android**: Ensured proper nested class visibility for bridge functions.

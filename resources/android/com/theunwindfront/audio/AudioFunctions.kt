@@ -412,6 +412,16 @@ class AudioFunctions {
             }
         }
 
+        class PlayTrackAt(private val activity: FragmentActivity) : BridgeFunction {
+            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+                activityRef = WeakReference(activity)
+                appContext = activity.applicationContext
+                val index = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
+                playTrackAt(index)
+                return mapOf("success" to true)
+            }
+        }
+
         class Load(private val activity: FragmentActivity) : BridgeFunction {
             override fun execute(parameters: Map<String, Any>): Map<String, Any> {
                 activityRef = WeakReference(activity)

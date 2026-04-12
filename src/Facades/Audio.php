@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Facade;
 
 /**
  * @method static bool play(string $url, array $metadata = [])
+ * @method static bool playTrackAt(int $index)
  * @method static bool load(string $url, array $metadata = [])
  * @method static bool pause()
  * @method static bool resume()

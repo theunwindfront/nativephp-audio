@@ -24,6 +24,24 @@ class Audio
     }
 
     /**
+     * Play a specific track from the current playlist by its index
+     */
+    public function playTrackAt(int $index): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.playTrackAt', json_encode(['index' => $index]));
+
+            if ($result) {
+                $decoded = json_decode($result);
+
+                return $decoded->success ?? false;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Load an audio file without starting playback immediately
      */
     public function load(string $url, array $metadata = []): bool
