@@ -13,6 +13,7 @@ import android.os.IBinder
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.media.app.NotificationCompat.MediaStyle
+import android.support.v4.media.session.MediaControllerCompat
 
 class AudioService : Service() {
 
@@ -23,19 +24,34 @@ class AudioService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_REFRESH_STATE -> refreshNotification()
+            ACTION_NEXT -> {
+                AudioFunctions.getMediaController(this)?.transportControls?.skipToNext()
+            }
+            ACTION_PREVIOUS -> {
+                AudioFunctions.getMediaController(this)?.transportControls?.skipToPrevious()
+            }
+            ACTION_REFRESH_STATE -> {
+
+                refreshNotification()
+            }
             else -> {
                 intent?.getStringExtra(EXTRA_TITLE)?.let { currentTitle = it }
                 intent?.getStringExtra(EXTRA_ARTIST)?.let { currentArtist = it }
                 
                 val notification = buildNotification()
+                
                 val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                 } else {
                     0
                 }
 
-                ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, foregroundServiceType)
+                ServiceCompat.startForeground(
+                    this,
+                    NOTIFICATION_ID,
+                    notification,
+                    foregroundServiceType
+                )
             }
         }
         return START_STICKY
@@ -50,7 +66,11 @@ class AudioService : Service() {
 
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(CHANNEL_ID, "Audio Playback", NotificationManager.IMPORTANCE_LOW).apply {
+            val channel = NotificationChannel(
+                CHANNEL_ID,
+                "Audio Playback",
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
                 description = "Controls for background audio playback"
                 setShowBadge(false)
             }
@@ -63,37 +83,41 @@ class AudioService : Service() {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
-        val contentPendingIntent = PendingIntent.getActivity(this, 0, launchIntent ?: Intent(), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val contentPendingIntent = PendingIntent.getActivity(
+            this, 0,
+            launchIntent ?: Intent(),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val sessionToken = AudioFunctions.getSessionToken(this)
-        val isPlaying = AudioFunctions.mediaPlayer?.isPlaying == true
         
+        val prevIntent = Intent(this, AudioService::class.java).apply { action = ACTION_PREVIOUS }
+        val prevPendingIntent = PendingIntent.getService(this, 2, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        
+        val nextIntent = Intent(this, AudioService::class.java).apply { action = ACTION_NEXT }
+        val nextPendingIntent = PendingIntent.getService(this, 3, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
         val style = MediaStyle()
             .setMediaSession(sessionToken)
-            .setShowActionsInCompactView(0, 1, 2)
+            .setShowActionsInCompactView(1) // Show only play/pause in compact view
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle(currentTitle)
             .setContentText(currentArtist ?: "")
             .setContentIntent(contentPendingIntent)
-            .setOngoing(isPlaying)
+            .setOngoing(true)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setStyle(style)
-            .addAction(android.R.drawable.ic_media_previous, "Previous", createPendingIntent(ACTION_PREVIOUS))
-            .addAction(if (isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play, if (isPlaying) "Pause" else "Play", createPendingIntent(ACTION_TOGGLE))
-            .addAction(android.R.drawable.ic_media_next, "Next", createPendingIntent(ACTION_NEXT))
+            .addAction(android.R.drawable.ic_media_previous, "Previous", prevPendingIntent)
+            .addAction(android.R.drawable.ic_media_pause, "Pause", null) // Placeholder, we should probably use a toggle intent
+            .addAction(android.R.drawable.ic_media_next, "Next", nextPendingIntent)
+
 
         AudioFunctions.currentArtwork?.let { builder.setLargeIcon(it) }
 
         return builder.build()
-    }
-
-    private fun createPendingIntent(action: String): PendingIntent {
-        val session = AudioFunctions.mediaSession ?: return PendingIntent.getService(this, 0, Intent(), PendingIntent.FLAG_IMMUTABLE)
-        val intent = Intent(this, AudioReceiver::class.java).apply { this.action = action }
-        return PendingIntent.getBroadcast(this, action.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     private fun refreshNotification() {
@@ -106,11 +130,10 @@ class AudioService : Service() {
         const val CHANNEL_ID = "audio_playback_channel"
         const val EXTRA_TITLE = "title"
         const val EXTRA_ARTIST = "artist"
-        
         const val ACTION_REFRESH_STATE = "com.theunwindfront.audio.ACTION_REFRESH_STATE"
         const val ACTION_NEXT = "com.theunwindfront.audio.ACTION_NEXT"
         const val ACTION_PREVIOUS = "com.theunwindfront.audio.ACTION_PREVIOUS"
-        const val ACTION_TOGGLE = "com.theunwindfront.audio.ACTION_TOGGLE"
+
 
         var currentTitle: String = "Now Playing"
         var currentArtist: String? = null
@@ -134,8 +157,16 @@ class AudioService : Service() {
         }
 
         fun refreshState(context: Context) {
-            val intent = Intent(context, AudioService::class.java).apply { action = ACTION_REFRESH_STATE }
+            val intent = Intent(context, AudioService::class.java).apply {
+                action = ACTION_REFRESH_STATE
+            }
             context.startService(intent)
+        }
+
+        /** Update notification text when new metadata arrives. */
+        fun updateNotification(context: Context, title: String, artist: String? = null) {
+            start(context, title, artist)
         }
     }
 }
+

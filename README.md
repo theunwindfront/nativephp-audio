@@ -1,151 +1,163 @@
 # NativePHP Audio Player Plugin
 
-[![Latest Version on Packagist](https://img.shields.io/packagist/v/theunwindfront/nativephp-audio.svg?style=flat-square)](https://packagist.org/packages/theunwindfront/nativephp-audio)
-[![Total Downloads](https://img.shields.io/packagist/dt/theunwindfront/nativephp-audio.svg?style=flat-square)](https://packagist.org/packages/theunwindfront/nativephp-audio)
-[![License](https://img.shields.io/packagist/l/theunwindfront/nativephp-audio.svg?style=flat-square)](https://packagist.org/packages/theunwindfront/nativephp-audio)
+<p align="left">
+    <a href="https://packagist.org/packages/theunwindfront/nativephp-audio"><img src="https://img.shields.io/packagist/v/theunwindfront/nativephp-audio" alt="Latest Version on Packagist"></a>
+    <a href="https://packagist.org/packages/theunwindfront/nativephp-audio"><img src="https://img.shields.io/packagist/dt/theunwindfront/nativephp-audio" alt="Total Downloads"></a>
+    <a href="https://packagist.org/packages/theunwindfront/nativephp-audio"><img src="https://img.shields.io/packagist/l/theunwindfront/nativephp-audio" alt="License"></a>
+    <a href="https://github.com/theunwindfront/nativephp-audio/actions"><img src="https://github.com/theunwindfront/nativephp-audio/actions/workflows/release.yml/badge.svg" alt="Build Status"></a>
+</p>
 
-A premium NativePHP plugin for professional audio playback on mobile devices (Android & iOS). This plugin provides deep integration with native OS features like MediaSession, background services, and remote controls.
 
-## ✨ Features
+A professional NativePHP plugin for audio playback on mobile devices, supporting background play, playlists, and remote controls.
 
-- **🏆 Native Media Integration** - Full support for OS Lock Screen controls, Bluetooth devices, and Android Auto/CarPlay.
-- **📱 Background Excellence** - Reliable background playback using Foreground Services (Android) and specialized Audio Sessions (iOS).
-- **🎶 Advanced Playlist Management** - Natively managed queues with Shuffle and Repeat modes.
-- **🎧 Audio Focus Intelligence** - Gracefully handles interruptions (phone calls, notifications, Siri) with auto-ducking and resuming.
-- **🕒 Sleep Timers** - Programmatic sleep timers that safely release native resources.
-- **📊 Detailed Analytics Events** - Granular event reporting for playback progress, track changes, buffering, and remote commands.
-- **🖼 Rich Metadata** - Support for high-quality artwork, titles, artists, and arbitrary custom metadata.
 
-## 🚀 Installation
+## Features
+
+- **Full Playback Control** - Play, Pause, Resume, Stop, and Seek.
+- **Professional Playlists** - Native queueing with auto-advance, Shuffle, and Repeat modes.
+- **MediaSession Support** - Rich metadata (title, artist, artwork) on lock screens and OS control centers.
+- **Remote Commands** - Handle commands from headphones, car Bluetooth, and system widgets.
+- **Background Stability** - Dedicated foreground service for Android and background modes for iOS.
+- **Advanced State** - Get comprehensive player/playlist state in a single call.
+- **Sleep Timer & Rate** - Schedule playback to stop or adjust playback speed (0.5x to 2.0x).
+
+## Installation
 
 ```bash
-# Install via Composer
+# Install the package
 composer require theunwindfront/nativephp-audio
 
-# Publish the plugins provider (if not already done)
+# Publish the plugins provider (first time only)
 php artisan vendor:publish --tag=nativephp-plugins-provider
 
-# Register the plugin with NativePHP
+# Register the plugin
 php artisan native:plugin:register theunwindfront/nativephp-audio
 ```
 
-## 📖 Usage
+## Usage
 
-### PHP Interface (Livewire / Controller)
+### PHP (Laravel/Livewire)
 
 ```php
 use Theunwindfront\Audio\Facades\Audio;
 
-// 1. Play a single track with metadata
-Audio::play('https://example.com/song.mp3', [
-    'title'    => 'Midnight City',
-    'artist'   => 'M83',
-    'album'    => 'Hurry Up, We\'re Dreaming',
-    'artwork'  => 'https://example.com/artwork.jpg',
-    'duration' => 243.0,
+// Play a URL with metadata
+Audio::play('https://example.com/audio.mp3', [
+    'title' => 'Song Title',
+    'artist' => 'Artist Name',
+    'artwork' => 'https://example.com/cover.jpg'
 ]);
 
-// 2. Manage a Playlist (Natively handled auto-advance)
-Audio::setPlaylist([
-    [
-        'url'   => 'https://example.com/track1.mp3',
-        'title' => 'Track 01',
-        'artist'=> 'Artist A'
-    ],
-    [
-        'url'   => 'https://example.com/track2.mp3',
-        'title' => 'Track 02',
-        'artist'=> 'Artist B'
-    ],
-], autoPlay: true, startIndex: 0);
-
-// 3. Playback Controls
+// Basic controls
 Audio::pause();
 Audio::resume();
+Audio::stop();
+Audio::seek(45.5); // Seek to 45.5 seconds
+Audio::setVolume(0.8); // 0.0 to 1.0
+```
+
+### Advanced Features
+
+```php
+// Get full player state
+$state = Audio::getState();
+// Returns: ['url' => '...', 'position' => 30.5, 'isPlaying' => true, 'repeatMode' => 'all', ...]
+
+// Set progress update frequency (e.g., every 0.1 seconds for smooth sliders)
+Audio::setProgressInterval(0.1);
+
+// Set Playback speed
+Audio::setPlaybackRate(1.5);
+
+// Set a sleep timer (in seconds)
+Audio::setSleepTimer(1800);
+```
+
+### Professional Playlists
+
+The native OS handles track transitions, ensuring the next song plays instantly even if the app is in the background.
+
+```php
+$tracks = [
+    [
+        'url' => 'https://example.com/song1.mp3',
+        'title' => 'Song 1',
+        'artist' => 'Artist 1',
+        'artwork' => 'https://example.com/art1.jpg'
+    ],
+    [
+        'url' => 'https://example.com/song2.mp3',
+        'title' => 'Song 2',
+        'artist' => 'Artist 2'
+    ]
+];
+
+// Start a playlist queue
+Audio::setPlaylist($tracks);
+
+// Add to queue live without stopping playback
+Audio::appendTrack([
+    'url' => 'https://example.com/song3.mp3',
+    'title' => 'Song 3'
+]);
+
+// Navigation
 Audio::next();
 Audio::previous();
-Audio::skipTo(5); // Skip to index 5 in playlist
 
-// 4. State & Settings
-$state = Audio::getState(); 
-Audio::setVolume(0.8);
-Audio::setPlaybackRate(1.5);
+// Modes
+Audio::setRepeatMode('all'); // none, one, all
 Audio::setShuffleMode(true);
-Audio::setRepeatMode('all'); // 'none', 'one', 'all'
-
-// 5. Sleep Timer
-Audio::setSleepTimer(1800); // 30 minutes
 ```
 
-### 📡 Event Synchronization
+### Events
 
-This plugin dispatches powerful Laravel events that you can listen to in your application:
+You can listen for native audio events in your JavaScript code:
 
-| Event | Description |
-|-------|-------------|
-| `PlaybackStarted` | Fired when audio actually begins playing. |
-| `PlaybackProgressUpdated` | Heartbeat event with `position` and `duration`. |
-| `PlaylistTrackChanged` | Fired on auto-advance or manual track skip. |
-| `AudioFocusLost` | Fired when another app takes over audio. |
-| `RemotePlayReceived` | Fired when the user hits 'Play' on their headphones/lockscreen. |
+```javascript
+window.addEventListener('Theunwindfront\\Audio\\Events\\PlaybackProgressUpdated', (event) => {
+    const { position, duration } = event.detail;
+    // Update your progress bar
+});
 
-**Livewire Example:**
-
-```php
-use Theunwindfront\Audio\Events\PlaybackProgressUpdated;
-use Livewire\Attributes\On;
-
-#[On('native:Theunwindfront\Audio\Events\PlaybackProgressUpdated')]
-public function onProgress($position, $duration)
-{
-    $this->currentPosition = $position;
-    $this->totalDuration = $duration;
-}
+window.addEventListener('Theunwindfront\\Audio\\Events\\PlaybackBuffering', () => {
+    // Show loading spinner
+});
 ```
 
-## 🛠 Advanced Features
+## API Reference
 
-### Background Sync
-When your app returns from the background, you can "drain" any missed events that occurred while the PHP process was suspended:
+| Method | Returns | Description |
+|--------|---------|-------------|
+| `play(string $url, array $metadata)` | `bool` | Play an audio file with metadata |
+| `pause()` | `bool` | Pause playback |
+| `resume()` | `bool` | Resume playback |
+| `stop()` | `bool` | Stop playback |
+| `seek(float $seconds)` | `bool` | Seek to position |
+| `setVolume(float $level)` | `bool` | Set volume (0.0-1.0) |
+| `getState()` | `array` | Get full player state |
+| `setProgressInterval(float $seconds)` | `bool` | Set progress update frequency |
+| `setPlaylist(array $tracks)` | `bool` | Set native playlist queue |
+| `appendTrack(array $track)` | `bool` | Add track to queue |
+| `removeTrack(int $index)` | `bool` | Remove track from queue |
+| `next()` | `bool` | Skip to next track |
+| `previous()` | `bool` | Skip to previous track |
+| `setRepeatMode(string $mode)` | `bool` | Set repeat mode (none, one, all) |
+| `setShuffleMode(bool $enabled)` | `bool` | Toggle shuffle |
+| `setSleepTimer(int $seconds)` | `bool` | Stop audio after X seconds |
+| `setPlaybackRate(float $rate)` | `bool` | Change playback speed (0.5-2.0) |
 
-```php
-$missedEvents = Audio::drainEvents();
-foreach ($missedEvents as $event) {
-    // Sync your local state
-}
-```
+## Version Support
 
-### Sleep Timer
-Safely schedule a shutdown. This releases native resources and stops the foreground service:
+| Platform | Minimum Version |
+|----------|----------------|
+| Android  | 5.0 (API 21)   |
+| iOS      | 13.0            |
 
-```php
-Audio::setSleepTimer(600); // 10 minutes
-// Listen for completion
-// Event: Theunwindfront\Audio\Events\SleepTimerExpired
-```
-
-## 📋 API Reference
-
-| Method | Parameters | Returns |
-|--------|------------|---------|
-| `play` | `string $url, array $options` | `bool` |
-| `load` | `string $url, array $options` | `bool` |
-| `setPlaylist` | `array $tracks, bool $autoPlay, int $startIndex` | `bool` |
-| `getState` | - | `array` |
-| `setVolume` | `float $level` (0.0 - 1.0) | `bool` |
-| `setPlaybackRate` | `float $rate` (0.25 - 4.0) | `bool` |
-| `setSleepTimer` | `int $seconds` | `bool` |
-| `drainEvents` | - | `array` |
-
-## 📱 Version Support
-
-- **Android**: 5.0 (API 21) or higher.
-- **iOS**: 13.0 or higher.
-
-## 🤝 Support
+## Support
 
 For questions or issues, contact **pansuriya.sagar94@gmail.com**
 
-## 📄 License
+## License
 
 The MIT License (MIT). Please see [License File](LICENSE) for more information.
