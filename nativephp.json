@@ -139,6 +139,42 @@
             "android": "com.theunwindfront.audio.AudioFunctions.DrainEvents",
             "ios": "AudioFunctions.DrainEvents",
             "description": "Clear and return all events queued while in the background"
+        },
+        {
+            "name": "Audio.skipTrack",
+            "android": "com.theunwindfront.audio.AudioFunctions.SkipTrack",
+            "ios": "AudioFunctions.SkipTrack",
+            "description": "Skip to a specific track in the active playlist by index"
+        },
+        {
+            "name": "Audio.getTrack",
+            "android": "com.theunwindfront.audio.AudioFunctions.GetTrack",
+            "ios": "AudioFunctions.GetTrack",
+            "description": "Get a specific track from the playlist by index"
+        },
+        {
+            "name": "Audio.getActiveTrack",
+            "android": "com.theunwindfront.audio.AudioFunctions.GetActiveTrack",
+            "ios": "AudioFunctions.GetActiveTrack",
+            "description": "Get the currently active track object"
+        },
+        {
+            "name": "Audio.getActiveTrackIndex",
+            "android": "com.theunwindfront.audio.AudioFunctions.GetActiveTrackIndex",
+            "ios": "AudioFunctions.GetActiveTrackIndex",
+            "description": "Get the index of the active track"
+        },
+        {
+            "name": "Audio.getPlaylist",
+            "android": "com.theunwindfront.audio.AudioFunctions.GetPlaylist",
+            "ios": "AudioFunctions.GetPlaylist",
+            "description": "Get the full current playlist state"
+        },
+        {
+            "name": "Audio.cancelSleepTimer",
+            "android": "com.theunwindfront.audio.AudioFunctions.CancelSleepTimer",
+            "ios": "AudioFunctions.CancelSleepTimer",
+            "description": "Cancel an active sleep timer"
         }
     ],
 
@@ -152,7 +188,8 @@
         ],
         "dependencies": {
             "implementation": [
-                "androidx.media:media:1.7.0"
+                "androidx.media:media:1.7.0",
+                "androidx.core:core-ktx:1.13.1"
             ]
         },
         "activities": [],
@@ -183,8 +220,11 @@
         "Theunwindfront\\Audio\\Events\\PlaybackLoaded",
         "Theunwindfront\\Audio\\Events\\PlaybackStarted",
         "Theunwindfront\\Audio\\Events\\PlaybackPaused",
+        "Theunwindfront\\Audio\\Events\\PlaybackResumed",
         "Theunwindfront\\Audio\\Events\\PlaybackStopped",
         "Theunwindfront\\Audio\\Events\\PlaybackCompleted",
+        "Theunwindfront\\Audio\\Events\\PlaybackSeeked",
+        "Theunwindfront\\Audio\\Events\\PlaybackFailed",
         "Theunwindfront\\Audio\\Events\\PlaybackProgressUpdated",
         "Theunwindfront\\Audio\\Events\\PlaybackBuffering",
         "Theunwindfront\\Audio\\Events\\PlaybackReady",
@@ -192,10 +232,18 @@
         "Theunwindfront\\Audio\\Events\\RemotePauseReceived",
         "Theunwindfront\\Audio\\Events\\RemoteNextTrackReceived",
         "Theunwindfront\\Audio\\Events\\RemotePreviousTrackReceived",
+        "Theunwindfront\\Audio\\Events\\RemoteSeekReceived",
+        "Theunwindfront\\Audio\\Events\\RemoteStopReceived",
+        "Theunwindfront\\Audio\\Events\\AudioFocusLost",
+        "Theunwindfront\\Audio\\Events\\AudioFocusLostTransient",
+        "Theunwindfront\\Audio\\Events\\AudioFocusDucked",
+        "Theunwindfront\\Audio\\Events\\AudioFocusGained",
+        "Theunwindfront\\Audio\\Events\\PlaylistSet",
+        "Theunwindfront\\Audio\\Events\\PlaylistTrackChanged",
         "Theunwindfront\\Audio\\Events\\PlaylistEnded",
-        "Theunwindfront\\Audio\\Events\\SleepTimerExpired",
-        "Theunwindfront\\Audio\\Events\\PlaybackFailed",
-        "Theunwindfront\\Audio\\Events\\PlaybackStateChanged"
+        "Theunwindfront\\Audio\\Events\\PlaylistRepeatModeChanged",
+        "Theunwindfront\\Audio\\Events\\PlaylistShuffleChanged",
+        "Theunwindfront\\Audio\\Events\\SleepTimerExpired"
     ],
 
     "hooks": {}
