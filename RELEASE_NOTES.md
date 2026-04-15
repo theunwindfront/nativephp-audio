@@ -1,5 +1,11 @@
 # Release Notes
 
+## [1.1.5] - 2026-04-15
+### Changed
+- **Sync**: Merged latest development changes into main branch.
+- **Release**: Official stable release of recent feature updates and bug fixes.
+
+
 ## [1.1.4] - 2026-04-12
 ### Added
 - **API**: Added `playTrackAt($index)` to specifically play a track by its position in the native playlist.
