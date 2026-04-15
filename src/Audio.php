@@ -271,6 +271,21 @@ class Audio
     }
 
     /**
+     * Play a track at a specific index in the playlist.
+     */
+    public function playTrackAt(int $index): bool
+    {
+        if (function_exists('nativephp_call')) {
+            $result = nativephp_call('Audio.playTrackAt', json_encode(['index' => $index]));
+            if ($result) {
+                $decoded = json_decode($result, true);
+                return (bool) ($decoded['success'] ?? false);
+            }
+        }
+        return false;
+    }
+
+    /**
      * Get a track from the playlist by index.
      */
     public function getTrack(int $index): ?array

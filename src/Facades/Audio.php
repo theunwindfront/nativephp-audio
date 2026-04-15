@@ -22,6 +22,7 @@ use Illuminate\Support\Facades\Facade;
  * @method static bool next()
  * @method static bool previous()
  * @method static bool skipTo(int $index)
+ * @method static bool playTrackAt(int $index)
  * @method static array|null getTrack(int $index)
  * @method static array|null getActiveTrack()
  * @method static int|null getActiveTrackIndex()

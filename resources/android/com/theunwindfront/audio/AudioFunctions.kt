@@ -424,209 +424,217 @@ class AudioFunctions {
         }
 
         // ── Bridge Functions ──────────────────────────────────────────────────
+    }
 
-        class Play(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                activityRef = WeakReference(activity)
-                appContext = activity.applicationContext
-                playlist.clear()
-                playlistIndex = -1
-                val track = parameters.toMutableMap()
-                track["url"] = parameters["url"] as? String ?: return mapOf("success" to false)
-                playlist.add(track)
-                playTrackAtInternal(0)
-                return mapOf("success" to true)
-            }
+    class Play(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            activityRef = WeakReference(activity)
+            appContext = activity.applicationContext
+            playlist.clear()
+            playlistIndex = -1
+            val track = parameters.toMutableMap()
+            track["url"] = parameters["url"] as? String ?: return mapOf("success" to false)
+            playlist.add(track)
+            playTrackAtInternal(0)
+            return mapOf("success" to true)
         }
+    }
 
-        class Load(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                activityRef = WeakReference(activity)
-                appContext = activity.applicationContext
-                playlist.clear()
-                playlistIndex = -1
-                val track = parameters.toMutableMap()
-                track["url"] = parameters["url"] as? String ?: return mapOf("success" to false)
-                playlist.add(track)
-                playTrackAtInternal(0, autoStart = false)
-                return mapOf("success" to true)
-            }
+    class PlayTrackAt(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val idx = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
+            playTrackAtInternal(idx)
+            return mapOf("success" to true)
         }
+    }
 
-        class GetState(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                activityRef = WeakReference(activity)
-                return statePayload()
-            }
+    class Load(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            activityRef = WeakReference(activity)
+            appContext = activity.applicationContext
+            playlist.clear()
+            playlistIndex = -1
+            val track = parameters.toMutableMap()
+            track["url"] = parameters["url"] as? String ?: return mapOf("success" to false)
+            playlist.add(track)
+            playTrackAtInternal(0, autoStart = false)
+            return mapOf("success" to true)
         }
+    }
 
-        class SetPlaylist(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                activityRef = WeakReference(activity)
-                appContext = activity.applicationContext
-                val items = parameters["items"] as? List<Map<String, Any>> ?: return mapOf("success" to false)
-                playlist.clear()
-                playlist.addAll(items)
+    class GetState(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            activityRef = WeakReference(activity)
+            return statePayload()
+        }
+    }
+
+    class SetPlaylist(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            activityRef = WeakReference(activity)
+            appContext = activity.applicationContext
+            val items = parameters["items"] as? List<Map<String, Any>> ?: return mapOf("success" to false)
+            playlist.clear()
+            playlist.addAll(items)
+            regenerateShuffleOrder()
+            val startIdx = (parameters["startIndex"] as? Number)?.toInt() ?: 0
+            if (parameters["autoPlay"] as? Boolean != false) playTrackAtInternal(startIdx)
+            sendEvent("PlaylistSet", mapOf("total" to playlist.size))
+            return mapOf("success" to true)
+        }
+    }
+
+    class SkipTrack(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val idx = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
+            playTrackAtInternal(idx)
+            return mapOf("success" to true)
+        }
+    }
+
+    class GetTrack(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val idx = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
+            val track = playlist.getOrNull(effectiveIndex(idx)) ?: return mapOf("success" to false)
+            return mapOf("track" to track)
+        }
+    }
+
+    class GetActiveTrack(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            return if (playlistIndex >= 0) mapOf("track" to trackPayload()) else emptyMap()
+        }
+    }
+
+    class GetActiveTrackIndex(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            return if (playlistIndex >= 0) mapOf("index" to playlistIndex) else emptyMap()
+        }
+    }
+
+    class GetPlaylist(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            return mapOf(
+                "items" to playlist,
+                "index" to playlistIndex,
+                "total" to playlist.size,
+                "repeatMode" to repeatMode,
+                "shuffleMode" to shuffleMode
+            )
+        }
+    }
+
+    class SetRepeatMode(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            repeatMode = parameters["mode"] as? String ?: "none"
+            sendEvent("PlaylistRepeatModeChanged", mapOf("mode" to repeatMode))
+            return mapOf("success" to true)
+        }
+    }
+
+    class SetShuffleMode(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            shuffleMode = parameters["shuffle"] as? Boolean ?: false
+            regenerateShuffleOrder()
+            sendEvent("PlaylistShuffleChanged", mapOf("shuffle" to shuffleMode))
+            return mapOf("success" to true)
+        }
+    }
+
+    class AppendTrack(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val track = parameters["track"] as? Map<String, Any> ?: return mapOf("success" to false)
+            playlist.add(track)
+            regenerateShuffleOrder()
+            return mapOf("success" to true)
+        }
+    }
+
+    class RemoveTrack(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val idx = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
+            if (idx in playlist.indices) {
+                playlist.removeAt(idx)
+                if (playlistIndex == idx) stopInternal()
+                else if (playlistIndex > idx) playlistIndex--
                 regenerateShuffleOrder()
-                val startIdx = (parameters["startIndex"] as? Number)?.toInt() ?: 0
-                if (parameters["autoPlay"] as? Boolean != false) playTrackAtInternal(startIdx)
-                sendEvent("PlaylistSet", mapOf("total" to playlist.size))
-                return mapOf("success" to true)
             }
+            return mapOf("success" to true)
         }
+    }
 
-        class SkipTrack(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                val idx = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
-                playTrackAtInternal(idx)
-                return mapOf("success" to true)
-            }
+    class DrainEvents(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            activityRef = WeakReference(activity)
+            val events = JSONArray()
+            pendingEvents.forEach { events.put(JSONObject(it)) }
+            pendingEvents.clear()
+            return mapOf("events" to events)
         }
+    }
 
-        class GetTrack(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                val idx = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
-                val track = playlist.getOrNull(effectiveIndex(idx)) ?: return mapOf("success" to false)
-                return mapOf("track" to track)
+    class SetSleepTimer(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val seconds = (parameters["seconds"] as? Number)?.toLong() ?: 0L
+            cancelSleepTimerInternal()
+            if (seconds > 0) {
+                val handler = Handler(Looper.getMainLooper())
+                sleepTimerHandler = handler
+                sleepTimerRunnable = Runnable { stopInternal(); sendEvent("SleepTimerExpired", emptyMap()) }
+                handler.postDelayed(sleepTimerRunnable!!, seconds * 1000)
             }
+            return mapOf("success" to true)
         }
+    }
 
-        class GetActiveTrack(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                return if (playlistIndex >= 0) mapOf("track" to trackPayload()) else emptyMap()
-            }
+    class CancelSleepTimer(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            cancelSleepTimerInternal()
+            return mapOf("success" to true)
         }
+    }
 
-        class GetActiveTrackIndex(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                return if (playlistIndex >= 0) mapOf("index" to playlistIndex) else emptyMap()
-            }
+    class SetProgressInterval(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val seconds = (parameters["seconds"] as? Number)?.toDouble() ?: 1.0
+            progressIntervalMs = (seconds * 1000).toLong()
+            if (mediaPlayer?.isPlaying == true) startProgressTimer()
+            return mapOf("success" to true)
         }
+    }
 
-        class GetPlaylist(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                return mapOf(
-                    "items" to playlist,
-                    "index" to playlistIndex,
-                    "total" to playlist.size,
-                    "repeatMode" to repeatMode,
-                    "shuffleMode" to shuffleMode
-                )
-            }
+    // Standard Bridge Wrappers
+    class Pause(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { pauseInternal(); return mapOf("success" to true) } }
+    class Resume(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { resumeInternal(); return mapOf("success" to true) } }
+    class Stop(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { stopInternal(); return mapOf("success" to true) } }
+    class NextTrack(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { nextTrackInternal(); return mapOf("success" to true) } }
+    class PreviousTrack(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { previousTrackInternal(); return mapOf("success" to true) } }
+    class Seek(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { seekInternal((p["seconds"] as? Number)?.toDouble() ?: 0.0); return mapOf("success" to true) } }
+    class SetVolume(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(p: Map<String, Any>): Map<String, Any> {
+            val lv = (p["level"] as? Number)?.toFloat() ?: 1.0f
+            mediaPlayer?.setVolume(lv, lv)
+            return mapOf("success" to true)
         }
-
-        class SetRepeatMode(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                repeatMode = parameters["mode"] as? String ?: "none"
-                sendEvent("PlaylistRepeatModeChanged", mapOf("mode" to repeatMode))
-                return mapOf("success" to true)
-            }
+    }
+    class SetPlaybackRate(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(p: Map<String, Any>): Map<String, Any> {
+            playbackRate = (p["rate"] as? Number)?.toFloat() ?: 1.0f
+            applyRate()
+            updateSessionState()
+            return mapOf("success" to true)
         }
-
-        class SetShuffleMode(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                shuffleMode = parameters["shuffle"] as? Boolean ?: false
-                regenerateShuffleOrder()
-                sendEvent("PlaylistShuffleChanged", mapOf("shuffle" to shuffleMode))
-                return mapOf("success" to true)
-            }
-        }
-
-        class AppendTrack(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                val track = parameters["track"] as? Map<String, Any> ?: return mapOf("success" to false)
-                playlist.add(track)
-                regenerateShuffleOrder()
-                return mapOf("success" to true)
-            }
-        }
-
-        class RemoveTrack(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                val idx = (parameters["index"] as? Number)?.toInt() ?: return mapOf("success" to false)
-                if (idx in playlist.indices) {
-                    playlist.removeAt(idx)
-                    if (playlistIndex == idx) stopInternal()
-                    else if (playlistIndex > idx) playlistIndex--
-                    regenerateShuffleOrder()
-                }
-                return mapOf("success" to true)
-            }
-        }
-
-        class DrainEvents(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                activityRef = WeakReference(activity)
-                val events = JSONArray()
-                pendingEvents.forEach { events.put(JSONObject(it)) }
-                pendingEvents.clear()
-                return mapOf("events" to events)
-            }
-        }
-
-        class SetSleepTimer(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                val seconds = (parameters["seconds"] as? Number)?.toLong() ?: 0L
-                cancelSleepTimerInternal()
-                if (seconds > 0) {
-                    val handler = Handler(Looper.getMainLooper())
-                    sleepTimerHandler = handler
-                    sleepTimerRunnable = Runnable { stopInternal(); sendEvent("SleepTimerExpired", emptyMap()) }
-                    handler.postDelayed(sleepTimerRunnable!!, seconds * 1000)
-                }
-                return mapOf("success" to true)
-            }
-        }
-
-        class CancelSleepTimer(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                cancelSleepTimerInternal()
-                return mapOf("success" to true)
-            }
-        }
-
-        class SetProgressInterval(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(parameters: Map<String, Any>): Map<String, Any> {
-                val seconds = (parameters["seconds"] as? Number)?.toDouble() ?: 1.0
-                progressIntervalMs = (seconds * 1000).toLong()
-                if (mediaPlayer?.isPlaying == true) startProgressTimer()
-                return mapOf("success" to true)
-            }
-        }
-
-        // Standard Bridge Wrappers
-        class Pause(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { pauseInternal(); return mapOf("success" to true) } }
-        class Resume(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { resumeInternal(); return mapOf("success" to true) } }
-        class Stop(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { stopInternal(); return mapOf("success" to true) } }
-        class NextTrack(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { nextTrackInternal(); return mapOf("success" to true) } }
-        class PreviousTrack(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { previousTrackInternal(); return mapOf("success" to true) } }
-        class Seek(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { seekInternal((p["seconds"] as? Number)?.toDouble() ?: 0.0); return mapOf("success" to true) } }
-        class SetVolume(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(p: Map<String, Any>): Map<String, Any> {
-                val lv = (p["level"] as? Number)?.toFloat() ?: 1.0f
-                mediaPlayer?.setVolume(lv, lv)
-                return mapOf("success" to true)
-            }
-        }
-        class SetPlaybackRate(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(p: Map<String, Any>): Map<String, Any> {
-                playbackRate = (p["rate"] as? Number)?.toFloat() ?: 1.0f
-                applyRate()
-                updateSessionState()
-                return mapOf("success" to true)
-            }
-        }
-        class GetDuration(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { return mapOf("duration" to (mediaPlayer?.duration ?: 0) / 1000.0) } }
-        class GetCurrentPosition(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { return mapOf("position" to (mediaPlayer?.currentPosition ?: 0) / 1000.0) } }
-        class SetMetadata(private val activity: FragmentActivity) : BridgeFunction {
-            override fun execute(p: Map<String, Any>): Map<String, Any> {
-                metaTitle = p["title"] as? String
-                metaArtist = p["artist"] as? String
-                metaAlbum = p["album"] as? String
-                metaDurationMs = (p["duration"] as? Number)?.toLong()?.let { it * 1000 }
-                mediaSession?.setMetadata(buildMetadata())
-                return mapOf("success" to true)
-            }
+    }
+    class GetDuration(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { return mapOf("duration" to (mediaPlayer?.duration ?: 0) / 1000.0) } }
+    class GetCurrentPosition(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { return mapOf("position" to (mediaPlayer?.currentPosition ?: 0) / 1000.0) } }
+    class SetMetadata(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(p: Map<String, Any>): Map<String, Any> {
+            metaTitle = p["title"] as? String
+            metaArtist = p["artist"] as? String
+            metaAlbum = p["album"] as? String
+            metaDurationMs = (p["duration"] as? Number)?.toLong()?.let { it * 1000 }
+            mediaSession?.setMetadata(buildMetadata())
+            return mapOf("success" to true)
         }
     }
 }
