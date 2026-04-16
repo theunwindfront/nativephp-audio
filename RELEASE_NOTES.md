@@ -1,5 +1,9 @@
 # Release Notes
 
+## [1.2.1] - 2026-04-16
+### Fixed
+- **iOS**: Achieved full feature parity with Android by implementing missing bridge functions (`Seek`, `SetVolume`, `SetMetadata`, `SetPlaybackRate`, `AppendTrack`, `RemoveTrack`, and `PlayTrackAt`).
+
 ## [1.2.0] - 2026-04-16
 ### Added
 - **Storage**: Support for local audio files using absolute paths (e.g., `storage_path()`).
