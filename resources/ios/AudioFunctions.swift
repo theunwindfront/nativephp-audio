@@ -176,13 +176,25 @@ class AudioFunctions: NSObject {
         
         let lastIdx = playlistIndex
         let lastPos = positionSeconds()
-        let lastTrack = lastIdx >= 0 ? playlist[effectiveIndex(lastIdx)] : nil
+        let lastTrack = (lastIdx >= 0 && lastIdx < playlist.count) ? playlist[effectiveIndex(lastIdx)] : nil
 
         playlistIndex = index
         let track = playlist[effectiveIndex(index)]
-        guard let urlString = track["url"] as? String, let url = URL(string: urlString) else { return }
-
-        currentURL = urlString
+        
+        if let urlStr = track["url"] as? String {
+            let url: URL
+            if let webURL = URL(string: urlStr), webURL.scheme != nil {
+                url = webURL
+            } else {
+                url = URL(fileURLWithPath: urlStr)
+            }
+            currentURL = urlStr
+            preparePlayer(url: url)
+            
+            player?.play()
+            if playbackRate != 1.0 { player?.rate = playbackRate }
+        }
+        
         metaTitle = track["title"] as? String
         metaArtist = track["artist"] as? String
         metaAlbum = track["album"] as? String
@@ -191,11 +203,6 @@ class AudioFunctions: NSObject {
         metaClip = track["clip"] as? String
         metaMetadata = track["metadata"] as? [String: Any]
 
-        preparePlayer(url: url)
-        
-        player?.play()
-        if playbackRate != 1.0 { player?.rate = playbackRate }
-        
         var changedPayload: [String: Any] = ["index": index, "reason": reason, "track": trackPayload()]
         if let li = lastIdx {
             changedPayload["lastIndex"] = li

@@ -327,7 +327,11 @@ class AudioFunctions {
                     .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
                     .setUsage(AudioAttributes.USAGE_MEDIA)
                     .build())
-                setDataSource(context, Uri.parse(url))
+                if (url.startsWith("http://") || url.startsWith("https://") || url.startsWith("content://") || url.startsWith("file://")) {
+                    setDataSource(context, Uri.parse(url))
+                } else {
+                    setDataSource(url)
+                }
                 
                 setOnPreparedListener { mp ->
                     if (autoStart) {

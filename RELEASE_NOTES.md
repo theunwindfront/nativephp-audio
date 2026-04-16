@@ -1,5 +1,22 @@
 # Release Notes
 
+## [1.2.0] - 2026-04-16
+### Added
+- **Storage**: Support for local audio files using absolute paths (e.g., `storage_path()`).
+- **Android**: Automatically requests `READ_EXTERNAL_STORAGE` and `READ_MEDIA_AUDIO` permissions.
+- **iOS**: Integrated `URL(fileURLWithPath:)` for seamless local file resolution.
+- **Bridge**: Dynamic `audio:` prefixed events dispatched to the `window`.
+- **JS**: Comprehensive `audio.js` helper with all native bridge methods.
+- **Events**: 15 new Laravel events including `PlaybackResumed`, `PlaylistTrackChanged`, and `AudioFocusLost`.
+
+### Improved
+- **Bridge**: `bridge.blade.php` now uses a dynamic event mapper for easier extensibility.
+- **Stability**: Fixed potential variable scope issues in Swift and Kotlin bridge functions.
+
+## [1.1.5] - 2026-04-16
+### Added
+- **Initial Mobile Features**: Expanded background service and native playlist logic.
+
 ## [1.1.4] - 2026-04-12
 ### Added
 - **API**: Added `playTrackAt($index)` to specifically play a track by its position in the native playlist.

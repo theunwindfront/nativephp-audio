@@ -40,41 +40,64 @@ use Theunwindfront\Audio\Facades\Audio;
 Audio::play('https://example.com/song.mp3', [
     'title'    => 'Midnight City',
     'artist'   => 'M83',
-    'album'    => 'Hurry Up, We\'re Dreaming',
     'artwork'  => 'https://example.com/artwork.jpg',
-    'duration' => 243.0,
 ]);
 
-// 2. Manage a Playlist (Natively handled auto-advance)
+// 2. Play a Local File (Mobile Storage)
+// Raw paths from storage_path() are natively supported
+Audio::play(storage_path('app/public/recordings/audio.mp3'), [
+    'title'  => 'Voice Note',
+    'artist' => 'Recorded Local'
+]);
+
+// 3. Manage a Playlist (Natively handled auto-advance)
 Audio::setPlaylist([
     [
         'url'   => 'https://example.com/track1.mp3',
         'title' => 'Track 01',
-        'artist'=> 'Artist A'
     ],
-    [
-        'url'   => 'https://example.com/track2.mp3',
-        'title' => 'Track 02',
-        'artist'=> 'Artist B'
-    ],
+    // ... more tracks
 ], autoPlay: true, startIndex: 0);
 
-// 3. Playback Controls
+// 4. Playback Controls
 Audio::pause();
 Audio::resume();
 Audio::next();
 Audio::previous();
 Audio::skipTo(5); // Skip to index 5 in playlist
 
-// 4. State & Settings
+// 5. State & Settings
 $state = Audio::getState(); 
 Audio::setVolume(0.8);
 Audio::setPlaybackRate(1.5);
 Audio::setShuffleMode(true);
 Audio::setRepeatMode('all'); // 'none', 'one', 'all'
 
-// 5. Sleep Timer
+// 6. Sleep Timer
 Audio::setSleepTimer(1800); // 30 minutes
+```
+
+### ⚡ JavaScript Bridge
+
+If you are building a SPA (Inertia/Vue/React) or using Alpine.js, you can use the JavaScript bridge directly.
+
+First, include the bridge in your layout:
+```html
+@include('audio::bridge')
+```
+
+Then, use the `audio` helper:
+```javascript
+import audio from './resources/js/audio.js';
+
+// Play immediately
+await audio.play('https://server.com/live.mp3', { title: 'Live Stream' });
+
+// Listen for native events on the window
+window.addEventListener('audio:playback-progress-updated', (event) => {
+    const { position, duration } = event.detail;
+    console.log(`Playing: ${position} / ${duration}`);
+});
 ```
 
 ### 📡 Event Synchronization
@@ -86,22 +109,9 @@ This plugin dispatches powerful Laravel events that you can listen to in your ap
 | `PlaybackStarted` | Fired when audio actually begins playing. |
 | `PlaybackProgressUpdated` | Heartbeat event with `position` and `duration`. |
 | `PlaylistTrackChanged` | Fired on auto-advance or manual track skip. |
-| `AudioFocusLost` | Fired when another app takes over audio. |
-| `RemotePlayReceived` | Fired when the user hits 'Play' on their headphones/lockscreen. |
-
-**Livewire Example:**
-
-```php
-use Theunwindfront\Audio\Events\PlaybackProgressUpdated;
-use Livewire\Attributes\On;
-
-#[On('native:Theunwindfront\Audio\Events\PlaybackProgressUpdated')]
-public function onProgress($position, $duration)
-{
-    $this->currentPosition = $position;
-    $this->totalDuration = $duration;
-}
-```
+| `AudioFocusLost` | Fired when another app takes over audio (e.g. phone call). |
+| `RemotePlayReceived` | Fired when the user hits 'Play' on headphones/lockscreen. |
+| `SleepTimerExpired` | Fired when the scheduled sleep timer hits zero. |
 
 ## 🛠 Advanced Features
 
@@ -110,32 +120,31 @@ When your app returns from the background, you can "drain" any missed events tha
 
 ```php
 $missedEvents = Audio::drainEvents();
-foreach ($missedEvents as $event) {
-    // Sync your local state
-}
 ```
 
-### Sleep Timer
-Safely schedule a shutdown. This releases native resources and stops the foreground service:
+### Absolute Local Paths
+Unlike standard web players, this plugin has direct filesystem access. On Android, it even requests `READ_MEDIA_AUDIO` permissions automatically.
 
 ```php
-Audio::setSleepTimer(600); // 10 minutes
-// Listen for completion
-// Event: Theunwindfront\Audio\Events\SleepTimerExpired
+Audio::play('/storage/emulated/0/Download/my-song.mp3');
 ```
 
 ## 📋 API Reference
 
-| Method | Parameters | Returns |
-|--------|------------|---------|
-| `play` | `string $url, array $options` | `bool` |
-| `load` | `string $url, array $options` | `bool` |
-| `setPlaylist` | `array $tracks, bool $autoPlay, int $startIndex` | `bool` |
-| `getState` | - | `array` |
-| `setVolume` | `float $level` (0.0 - 1.0) | `bool` |
-| `setPlaybackRate` | `float $rate` (0.25 - 4.0) | `bool` |
-| `setSleepTimer` | `int $seconds` | `bool` |
-| `drainEvents` | - | `array` |
+| Method | Parameters | Description |
+|--------|------------|-------------|
+| `play` | `string $url, array $options` | Play/Restart audio |
+| `load` | `string $url, array $options` | Prepare audio without playing |
+| `setPlaylist` | `array $tracks, bool $autoPlay, int $idx` | Set native queue |
+| `next / previous` | - | Navigate playlist |
+| `skipTo` | `int $index` | Jump to specific track |
+| `setVolume` | `float $level` (0.0 - 1.0) | Set player volume |
+| `setPlaybackRate`| `float $rate` (0.25 - 4.0) | Set playback speed |
+| `setSleepTimer` | `int $seconds` | Schedule a shutdown |
+| `cancelSleepTimer`| - | Stop the active timer |
+| `getState` | - | Get full status object |
+| `getPlaylist` | - | Get full playlist state |
+| `drainEvents` | - | Get background events |
 
 ## 📱 Version Support
 
