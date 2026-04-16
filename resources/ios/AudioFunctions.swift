@@ -367,6 +367,71 @@ class AudioFunctions: NSObject {
     }
 
     @objc static func SetRepeatMode(_ parameters: [String: Any]) -> [String: Any] { repeatMode = parameters["mode"] as? String ?? "none"; return ["success": true] }
+
+    @objc static func Seek(_ parameters: [String: Any]) -> [String: Any] {
+        if let seconds = (parameters["seconds"] as? NSNumber)?.doubleValue {
+            player?.seek(to: CMTime(seconds: seconds, preferredTimescale: 600))
+            syncNowPlayingState()
+        }
+        return ["success": true]
+    }
+
+    @objc static func SetVolume(_ parameters: [String: Any]) -> [String: Any] {
+        if let level = (parameters["level"] as? NSNumber)?.floatValue {
+            userVolume = level
+            player?.volume = level
+        }
+        return ["success": true]
+    }
+
+    @objc static func SetMetadata(_ parameters: [String: Any]) -> [String: Any] {
+        if let title = parameters["title"] as? String { metaTitle = title }
+        if let artist = parameters["artist"] as? String { metaArtist = artist }
+        if let album = parameters["album"] as? String { metaAlbum = album }
+        if let d = (parameters["duration"] as? NSNumber)?.doubleValue { metaDuration = d }
+        if let artwork = parameters["artwork"] as? String { metaArtworkSource = artwork }
+        if let clip = parameters["clip"] as? String { metaClip = clip }
+        if let metadata = parameters["metadata"] as? [String: Any] { metaMetadata = metadata }
+        refreshNowPlayingInfo()
+        return ["success": true]
+    }
+
+    @objc static func SetPlaybackRate(_ parameters: [String: Any]) -> [String: Any] {
+        if let rate = (parameters["rate"] as? NSNumber)?.floatValue {
+            playbackRate = rate
+            if player?.rate ?? 0 > 0 {
+                player?.rate = rate
+            }
+        }
+        return ["success": true]
+    }
+
+    @objc static func AppendTrack(_ parameters: [String: Any]) -> [String: Any] {
+        if let track = parameters["track"] as? [String: Any] {
+            playlist.append(track)
+            shuffledOrder = Array(0..<playlist.count)
+            if shuffleMode { shuffledOrder.shuffle() }
+        }
+        return ["success": true]
+    }
+
+    @objc static func RemoveTrack(_ parameters: [String: Any]) -> [String: Any] {
+        if let idx = parameters["index"] as? Int, idx < playlist.count {
+            playlist.remove(at: idx)
+            if playlistIndex == idx { resetPlayer() }
+            else if playlistIndex > idx { playlistIndex -= 1 }
+            shuffledOrder = Array(0..<playlist.count)
+            if shuffleMode { shuffledOrder.shuffle() }
+        }
+        return ["success": true]
+    }
+
+    @objc static func PlayTrackAt(_ parameters: [String: Any]) -> [String: Any] {
+        if let idx = parameters["index"] as? Int {
+            playTrackAt(index: idx)
+        }
+        return ["success": true]
+    }
     @objc static func SetShuffleMode(_ parameters: [String: Any]) -> [String: Any] {
         shuffleMode = parameters["shuffle"] as? Bool ?? false
         shuffledOrder = Array(0..<playlist.count)
