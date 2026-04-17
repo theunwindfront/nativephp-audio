@@ -151,9 +151,14 @@ Audio::play('/storage/emulated/0/Download/my-song.mp3');
 - **Android**: 5.0 (API 21) or higher.
 - **iOS**: 13.0 or higher.
 
+## 👥 Credits
+
+- **[Sagar Pansuriya](https://github.com/theunwindfront)** - Lead Developer
+- [All Contributors](../../contributors)
+
 ## 🤝 Support
 
-For questions or issues, contact **pansuriya.sagar94@gmail.com**
+For questions or issues, contact **pansuriya.sagar94@gmail.com** or open a [GitHub Issue](https://github.com/theunwindfront/nativephp-audio/issues).
 
 ## 📄 License
 
