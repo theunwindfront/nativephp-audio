@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.fragment.app.FragmentActivity
@@ -163,6 +164,11 @@ class AudioFunctions {
         }
 
         fun getSessionToken(context: Context): MediaSessionCompat.Token = getOrCreateSession(context).sessionToken
+
+        fun getMediaController(context: Context): MediaControllerCompat? {
+            val token = getOrCreateSession(context).sessionToken
+            return MediaControllerCompat(context, token)
+        }
 
         // ── Logic Implementation ──────────────────────────────────────────────
 

@@ -1,5 +1,12 @@
 # Release Notes
 
+## [1.2.2] - 2026-05-11
+### Added
+- **Android**: Added `MediaControllerCompat` import and `getMediaController()` helper for improved cross-device media session control.
+
+### Improved
+- **Compatibility**: Extended `illuminate/support` requirement to include Laravel `^13.0`.
+
 ## [1.2.1] - 2026-04-16
 ### Fixed
 - **iOS**: Achieved full feature parity with Android by implementing missing bridge functions (`Seek`, `SetVolume`, `SetMetadata`, `SetPlaybackRate`, `AppendTrack`, `RemoveTrack`, and `PlayTrackAt`).
