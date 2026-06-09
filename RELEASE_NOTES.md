@@ -1,6 +1,6 @@
 # Release Notes
 
-## [1.3.0] - 2026-06-09
+## [1.3.1] - 2026-06-09
 ### Added
 - **Live Radio Streaming**: New `PlayStream` bridge function for both Android and iOS, enabling first-class live audio stream playback (Icecast, Shoutcast, HTTP streams).
 - **PHP**: `Audio::playStream($mountpoint, $options)` for starting live streams from PHP.
