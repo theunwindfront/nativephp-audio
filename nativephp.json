@@ -258,7 +258,8 @@
         "Theunwindfront\\Audio\\Events\\PlaylistRepeatModeChanged",
         "Theunwindfront\\Audio\\Events\\PlaylistShuffleChanged",
         "Theunwindfront\\Audio\\Events\\SleepTimerExpired",
-        "Theunwindfront\\Audio\\Events\\StreamMetadataChanged"
+        "Theunwindfront\\Audio\\Events\\StreamMetadataChanged",
+        "Theunwindfront\\Audio\\Events\\PlaybackStateChanged"
     ],
 
     "hooks": {}
