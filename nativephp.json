@@ -9,6 +9,12 @@
             "description": "Play an audio file from a URL or local path"
         },
         {
+            "name": "Audio.playStream",
+            "android": "com.theunwindfront.audio.AudioFunctions.PlayStream",
+            "ios": "AudioFunctions.PlayStream",
+            "description": "Play a live radio stream from a mountpoint"
+        },
+        {
             "name": "Audio.playTrackAt",
             "android": "com.theunwindfront.audio.AudioFunctions.PlayTrackAt",
             "ios": "AudioFunctions.PlayTrackAt",
@@ -61,6 +67,12 @@
             "android": "com.theunwindfront.audio.AudioFunctions.SetMetadata",
             "ios": "AudioFunctions.SetMetadata",
             "description": "Set track metadata (title, artist, album, artwork) for lock screens and media centers"
+        },
+        {
+            "name": "Audio.updateStreamMetadata",
+            "android": "com.theunwindfront.audio.AudioFunctions.UpdateStreamMetadata",
+            "ios": "AudioFunctions.UpdateStreamMetadata",
+            "description": "Update live stream metadata without replacing the current media item"
         },
         {
             "name": "Audio.setPlaylist",
@@ -245,7 +257,8 @@
         "Theunwindfront\\Audio\\Events\\PlaylistEnded",
         "Theunwindfront\\Audio\\Events\\PlaylistRepeatModeChanged",
         "Theunwindfront\\Audio\\Events\\PlaylistShuffleChanged",
-        "Theunwindfront\\Audio\\Events\\SleepTimerExpired"
+        "Theunwindfront\\Audio\\Events\\SleepTimerExpired",
+        "Theunwindfront\\Audio\\Events\\StreamMetadataChanged"
     ],
 
     "hooks": {}

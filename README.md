@@ -11,6 +11,7 @@ A premium NativePHP plugin for professional audio playback on mobile devices (An
 - **🏆 Native Media Integration** - Full support for OS Lock Screen controls, Bluetooth devices, and Android Auto/CarPlay.
 - **📱 Background Excellence** - Reliable background playback using Foreground Services (Android) and specialized Audio Sessions (iOS).
 - **🎶 Advanced Playlist Management** - Natively managed queues with Shuffle and Repeat modes.
+- **📻 Live Radio Streaming** - First-class support for live audio streams with real-time metadata updates.
 - **🎧 Audio Focus Intelligence** - Gracefully handles interruptions (phone calls, notifications, Siri) with auto-ducking and resuming.
 - **🕒 Sleep Timers** - Programmatic sleep timers that safely release native resources.
 - **📊 Detailed Analytics Events** - Granular event reporting for playback progress, track changes, buffering, and remote commands.
@@ -77,6 +78,37 @@ Audio::setRepeatMode('all'); // 'none', 'one', 'all'
 Audio::setSleepTimer(1800); // 30 minutes
 ```
 
+### 📻 Live Radio Streaming
+
+Play live audio streams (Icecast, Shoutcast, or any HTTP audio stream) with dedicated streaming APIs:
+
+```php
+use Theunwindfront\Audio\Facades\Audio;
+
+// Play a stream by direct URL
+Audio::playStream('https://stream.example.com/live.mp3', [
+    'title'   => 'My Radio Station',
+    'artist'  => 'Live DJ Set',
+    'artwork' => 'https://example.com/radio-logo.jpg',
+]);
+
+// Play a stream by mountpoint (resolved against a server URL)
+Audio::playStream('/live', [
+    'serverUrl' => 'https://stream.example.com',
+    'title'     => 'Main Channel',
+    'artist'    => 'Now Playing',
+]);
+
+// Update metadata in real-time (e.g., when the current song changes)
+Audio::updateStreamMetadata([
+    'title'   => 'New Song Title',
+    'artist'  => 'New Artist',
+    'artwork' => 'https://example.com/new-artwork.jpg',
+]);
+```
+
+> **Note:** `playStream` automatically marks the session as a live stream, sets duration to `null`, disables auto-advance on completion, and flags the lock screen / Now Playing info as a live broadcast.
+
 ### ⚡ JavaScript Bridge
 
 If you are building a SPA (Inertia/Vue/React) or using Alpine.js, you can use the JavaScript bridge directly.
@@ -91,12 +123,30 @@ Then, use the `audio` helper:
 import audio from './resources/js/audio.js';
 
 // Play immediately
-await audio.play('https://server.com/live.mp3', { title: 'Live Stream' });
+await audio.play('https://server.com/song.mp3', { title: 'My Song' });
+
+// Play a live stream
+await audio.playStream('https://stream.example.com/live.mp3', {
+    title: 'Live Radio',
+    artist: 'DJ Mix'
+});
+
+// Update stream metadata in real-time
+await audio.updateStreamMetadata({
+    title: 'New Track Playing',
+    artist: 'Featured Artist'
+});
 
 // Listen for native events on the window
 window.addEventListener('audio:playback-progress-updated', (event) => {
     const { position, duration } = event.detail;
     console.log(`Playing: ${position} / ${duration}`);
+});
+
+// Listen for stream metadata changes
+window.addEventListener('audio:stream-metadata-changed', (event) => {
+    const { track, metadata } = event.detail;
+    console.log(`Now playing: ${track.title} by ${track.artist}`);
 });
 ```
 
@@ -112,6 +162,7 @@ This plugin dispatches powerful Laravel events that you can listen to in your ap
 | `AudioFocusLost` | Fired when another app takes over audio (e.g. phone call). |
 | `RemotePlayReceived` | Fired when the user hits 'Play' on headphones/lockscreen. |
 | `SleepTimerExpired` | Fired when the scheduled sleep timer hits zero. |
+| `StreamMetadataChanged` | Fired when live stream metadata is updated (e.g. new song starts). |
 
 ## 🛠 Advanced Features
 
@@ -134,12 +185,15 @@ Audio::play('/storage/emulated/0/Download/my-song.mp3');
 | Method | Parameters | Description |
 |--------|------------|-------------|
 | `play` | `string $url, array $options` | Play/Restart audio |
+| `playStream` | `string $mountpoint, array $options` | Play a live radio stream |
 | `load` | `string $url, array $options` | Prepare audio without playing |
 | `setPlaylist` | `array $tracks, bool $autoPlay, int $idx` | Set native queue |
 | `next / previous` | - | Navigate playlist |
 | `skipTo` | `int $index` | Jump to specific track |
 | `setVolume` | `float $level` (0.0 - 1.0) | Set player volume |
 | `setPlaybackRate`| `float $rate` (0.25 - 4.0) | Set playback speed |
+| `setMetadata` | `array $metadata` | Set track metadata |
+| `updateStreamMetadata`| `array $metadata` | Update live stream metadata without replacing track |
 | `setSleepTimer` | `int $seconds` | Schedule a shutdown |
 | `cancelSleepTimer`| - | Stop the active timer |
 | `getState` | - | Get full status object |

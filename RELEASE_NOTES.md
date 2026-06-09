@@ -1,5 +1,27 @@
 # Release Notes
 
+## [1.3.0] - 2026-06-09
+### Added
+- **Live Radio Streaming**: New `PlayStream` bridge function for both Android and iOS, enabling first-class live audio stream playback (Icecast, Shoutcast, HTTP streams).
+- **PHP**: `Audio::playStream($mountpoint, $options)` for starting live streams from PHP.
+- **PHP**: `Audio::updateStreamMetadata($metadata)` for real-time metadata updates during live streams.
+- **JS Bridge**: `audio.playStream()` and `audio.updateStreamMetadata()` methods.
+- **Facade**: Added `@method` annotations for `playStream` and `updateStreamMetadata`.
+- **Events**: `StreamMetadataChanged` event fired when live stream metadata is updated.
+- **Android**: Stream URL resolution from mountpoint + server base URL, stream state tracking in payloads.
+- **iOS**: Stream URL resolution, mountpoint support, `isLiveStream` flag on Now Playing info.
+
+### Fixed
+- **iOS**: Critical compile error — `applyMetadata` returned `[String: Any]` from a `Void` function.
+- **iOS**: `SetMetadata` bridge function was accidentally removed during refactoring; re-added as `@objc` wrapper.
+- **iOS**: `UpdateStreamMetadata` bridge function was missing entirely; added with `StreamMetadataChanged` event dispatch.
+- **iOS**: Duplicate `isStream`/`streamMountpoint` assignments in `trackPayload()` and `resetPlayer()`.
+- **iOS**: `SetMetadata` no longer incorrectly fires `StreamMetadataChanged` events.
+- **Android**: `PlayStream` bridge class was registered in `nativephp.json` but not implemented; now fully implemented.
+- **Android**: `trackPayload()` and `statePayload()` now include `isStream`, `streamType`, and `mountpoint` fields (feature parity with iOS).
+- **Android**: Stream state (`isStream`, `streamMountpoint`) is properly reset when stopping or switching to playlist tracks.
+- **Android**: Stream duration correctly reports `0.0` instead of `-1` for live streams.
+
 ## [1.2.2] - 2026-05-11
 ### Added
 - **Android**: Added `MediaControllerCompat` import and `getMediaController()` helper for improved cross-device media session control.
