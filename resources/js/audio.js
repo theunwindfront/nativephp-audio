@@ -2,6 +2,9 @@ const audioPlayer = {
     play: async (url, metadata = {}) => {
         return await window.nativephp.call('Audio.play', { url, ...metadata });
     },
+    playStream: async (mountpoint, metadata = {}) => {
+        return await window.nativephp.call('Audio.playStream', { mountpoint, ...metadata });
+    },
     load: async (url, metadata = {}) => {
         return await window.nativephp.call('Audio.load', { url, ...metadata });
     },
@@ -23,6 +26,7 @@ const audioPlayer = {
     setMetadata: async (metadata) => {
         return await window.nativephp.call('Audio.setMetadata', metadata);
     },
+    updateStreamMetadata: async (metadata) => window.nativephp.call('Audio.updateStreamMetadata', metadata),
     setPlaybackRate: async (rate) => {
         return await window.nativephp.call('Audio.setPlaybackRate', { rate });
     },

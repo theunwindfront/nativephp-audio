@@ -13,6 +13,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.support.v4.media.MediaMetadataCompat
+import android.support.v4.media.session.MediaControllerCompat
 import android.support.v4.media.session.MediaSessionCompat
 import android.support.v4.media.session.PlaybackStateCompat
 import androidx.fragment.app.FragmentActivity
@@ -45,6 +46,8 @@ class AudioFunctions {
         private var metaArtworkSource: String? = null
         private var metaClip: String? = null
         private var metaMetadata: Map<String, Any>? = null
+        private var isStream: Boolean = false
+        private var streamMountpoint: String? = null
         internal var currentArtwork: Bitmap? = null
 
         // Playlist
@@ -102,21 +105,30 @@ class AudioFunctions {
             metaArtworkSource?.let { map["artwork"] = it }
             metaClip?.let { map["clip"] = it }
             metaMetadata?.let { map["metadata"] = it }
+            map["isStream"] = isStream
+            if (isStream) map["streamType"] = "radio"
+            streamMountpoint?.let { map["mountpoint"] = it }
             return map
         }
 
-        private fun statePayload(): Map<String, Any> = mapOf(
-            "track" to trackPayload(),
-            "position" to (mediaPlayer?.currentPosition ?: 0) / 1000.0,
-            "duration" to (mediaPlayer?.duration ?: 0) / 1000.0,
-            "isPlaying" to (mediaPlayer?.isPlaying ?: false),
-            "isBuffering" to isBuffering,
-            "playbackRate" to playbackRate,
-            "repeatMode" to repeatMode,
-            "shuffleMode" to shuffleMode,
-            "playlistIndex" to playlistIndex,
-            "playlistTotal" to playlist.size
-        )
+        private fun statePayload(): Map<String, Any> {
+            val map = mutableMapOf<String, Any>(
+                "track" to trackPayload(),
+                "position" to (mediaPlayer?.currentPosition ?: 0) / 1000.0,
+                "duration" to if (isStream) 0.0 else (mediaPlayer?.duration ?: 0) / 1000.0,
+                "isPlaying" to (mediaPlayer?.isPlaying ?: false),
+                "isBuffering" to isBuffering,
+                "playbackRate" to playbackRate,
+                "repeatMode" to repeatMode,
+                "shuffleMode" to shuffleMode,
+                "playlistIndex" to playlistIndex,
+                "playlistTotal" to playlist.size
+            )
+            map["isStream"] = isStream
+            if (isStream) map["streamType"] = "radio"
+            streamMountpoint?.let { map["mountpoint"] = it }
+            return map
+        }
 
         private fun buildMetadata(): MediaMetadataCompat {
             val builder = MediaMetadataCompat.Builder()
@@ -164,6 +176,11 @@ class AudioFunctions {
 
         fun getSessionToken(context: Context): MediaSessionCompat.Token = getOrCreateSession(context).sessionToken
 
+        fun getMediaController(context: Context): MediaControllerCompat? {
+            val token = getOrCreateSession(context).sessionToken
+            return MediaControllerCompat(context, token)
+        }
+
         // ── Logic Implementation ──────────────────────────────────────────────
 
         private fun resumeInternal() {
@@ -189,6 +206,8 @@ class AudioFunctions {
             mediaPlayer?.stop()
             mediaPlayer?.release()
             mediaPlayer = null
+            isStream = false
+            streamMountpoint = null
             stopProgressTimer()
             cancelSleepTimerInternal()
             abandonAudioFocus()
@@ -306,6 +325,8 @@ class AudioFunctions {
             val lastTrack = if (lastIdx >= 0) playlist.getOrNull(effectiveIndex(lastIdx)) else null
 
             playlistIndex = index
+            isStream = false
+            streamMountpoint = null
             val track = playlist[effectiveIndex(index)]
             val url = track["url"] as? String ?: return
             
@@ -427,6 +448,36 @@ class AudioFunctions {
             if (shuffleMode) shuffledOrder.shuffle()
         }
 
+        private fun applyMetadata(p: Map<String, Any>, includeClassicalFields: Boolean = true) {
+            (p["title"] as? String)?.let { metaTitle = it }
+            (p["artist"] as? String)?.let { metaArtist = it }
+            (p["album"] as? String)?.let { metaAlbum = it }
+            if (includeClassicalFields) {
+                (p["duration"] as? Number)?.let { metaDurationMs = it.toLong() * 1000 }
+            }
+            (p["artwork"] as? String)?.let { metaArtworkSource = it }
+            if (includeClassicalFields) {
+                (p["clip"] as? String)?.let { metaClip = it }
+            }
+            @Suppress("UNCHECKED_CAST")
+            (p["metadata"] as? Map<String, Any>)?.let { metaMetadata = it }
+        }
+
+        private fun resolveStreamUrl(source: String, parameters: Map<String, Any>): String? {
+            if (source.startsWith("http://") || source.startsWith("https://")) return source
+            if (source.contains("://")) return null
+            val server = (parameters["serverUrl"] as? String
+                ?: parameters["serverURL"] as? String
+                ?: parameters["baseUrl"] as? String
+                ?: parameters["baseURL"] as? String
+                ?: parameters["host"] as? String)?.trim()
+                ?: return null
+            if (!server.startsWith("http://") && !server.startsWith("https://")) return null
+            val base = if (server.endsWith("/")) server else "$server/"
+            val mount = if (source.startsWith("/")) source.substring(1) else source
+            return "$base$mount"
+        }
+
         // ── Bridge Functions ──────────────────────────────────────────────────
     }
 
@@ -440,6 +491,90 @@ class AudioFunctions {
             track["url"] = parameters["url"] as? String ?: return mapOf("success" to false)
             playlist.add(track)
             playTrackAtInternal(0)
+            return mapOf("success" to true)
+        }
+    }
+
+    class PlayStream(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(parameters: Map<String, Any>): Map<String, Any> {
+            val mountpoint = ((parameters["mountpoint"] as? String)
+                ?: (parameters["url"] as? String))?.trim()
+                ?: return mapOf("success" to false, "error" to "Invalid stream mountpoint or URL")
+
+            val url = resolveStreamUrl(mountpoint, parameters)
+                ?: return mapOf("success" to false, "error" to "Invalid stream mountpoint or URL")
+
+            activityRef = WeakReference(activity)
+            appContext = activity.applicationContext
+            val context: Context = activity
+
+            playlist.clear()
+            playlistIndex = -1
+            isStream = true
+            streamMountpoint = mountpoint
+            metaDurationMs = null
+            currentUrl = url
+
+            metaTitle = parameters["title"] as? String
+            metaArtist = parameters["artist"] as? String
+            metaAlbum = parameters["album"] as? String
+            metaArtworkSource = parameters["artwork"] as? String
+            metaClip = null
+            @Suppress("UNCHECKED_CAST")
+            metaMetadata = parameters["metadata"] as? Map<String, Any>
+
+            mediaPlayer?.release()
+            mediaPlayer = MediaPlayer().apply {
+                setAudioAttributes(AudioAttributes.Builder()
+                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                    .setUsage(AudioAttributes.USAGE_MEDIA)
+                    .build())
+                setDataSource(context, Uri.parse(url))
+
+                setOnPreparedListener { mp ->
+                    requestAudioFocus(context)
+                    mp.start()
+                    applyRate()
+                    startProgressTimer()
+                    AudioService.start(context, metaTitle ?: "Live Stream", metaArtist)
+                    sendEvent("PlaybackStarted", statePayload())
+                    mediaSession?.setMetadata(buildMetadata())
+                    updateSessionState()
+                }
+
+                setOnInfoListener { _, what, _ ->
+                    when (what) {
+                        MediaPlayer.MEDIA_INFO_BUFFERING_START -> { isBuffering = true; sendEvent("PlaybackBuffering", statePayload()) }
+                        MediaPlayer.MEDIA_INFO_BUFFERING_END -> { isBuffering = false; sendEvent("PlaybackReady", statePayload()) }
+                    }
+                    true
+                }
+
+                setOnCompletionListener {
+                    sendEvent("PlaybackCompleted", statePayload())
+                }
+
+                setOnErrorListener { _, what, extra ->
+                    sendEvent("PlaybackFailed", mapOf("track" to trackPayload(), "error" to "what: $what extra: $extra"))
+                    false
+                }
+
+                prepareAsync()
+            }
+
+            metaArtworkSource?.let { src ->
+                Thread {
+                    try {
+                        val bitmap = if (src.startsWith("http")) BitmapFactory.decodeStream(URL(src).openStream()) else BitmapFactory.decodeFile(src)
+                        Handler(Looper.getMainLooper()).post {
+                            currentArtwork = bitmap
+                            mediaSession?.setMetadata(buildMetadata())
+                            AudioService.refreshState(context)
+                        }
+                    } catch (_: Exception) {}
+                }.start()
+            }
+
             return mapOf("success" to true)
         }
     }
@@ -633,11 +768,21 @@ class AudioFunctions {
     class GetCurrentPosition(private val activity: FragmentActivity) : BridgeFunction { override fun execute(p: Map<String, Any>): Map<String, Any> { return mapOf("position" to (mediaPlayer?.currentPosition ?: 0) / 1000.0) } }
     class SetMetadata(private val activity: FragmentActivity) : BridgeFunction {
         override fun execute(p: Map<String, Any>): Map<String, Any> {
-            metaTitle = p["title"] as? String
-            metaArtist = p["artist"] as? String
-            metaAlbum = p["album"] as? String
-            metaDurationMs = (p["duration"] as? Number)?.toLong()?.let { it * 1000 }
+            applyMetadata(p)
             mediaSession?.setMetadata(buildMetadata())
+            appContext?.let { AudioService.refreshState(it) }
+            return mapOf("success" to true)
+        }
+    }
+
+    class UpdateStreamMetadata(private val activity: FragmentActivity) : BridgeFunction {
+        override fun execute(p: Map<String, Any>): Map<String, Any> {
+            activityRef = WeakReference(activity)
+            appContext = activity.applicationContext
+            applyMetadata(p, includeClassicalFields = false)
+            mediaSession?.setMetadata(buildMetadata())
+            appContext?.let { AudioService.refreshState(it) }
+            sendEvent("StreamMetadataChanged", mapOf("track" to trackPayload(), "metadata" to p))
             return mapOf("success" to true)
         }
     }
