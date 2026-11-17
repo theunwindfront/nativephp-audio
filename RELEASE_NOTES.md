@@ -1,5 +1,36 @@
 # Release Notes
 
+## [1.5.0] - 2026-11-17
+### Fixed
+- **Background events**: Events queued while the app was in the background were never delivered and the queue grew without limit (one progress event per second). Queued events are now delivered automatically when the app returns to the foreground, progress updates aren't queued, and the queue is capped at 200 events.
+- **Shuffle**: Turning shuffle on/off or adding/removing tracks reshuffled the whole queue, so the current index pointed at a different song. The current track now stays put; with shuffle on it moves to the front of the new order. `setPlaylist()` with shuffle on starts on `startIndex` instead of a random track.
+- **Repeat one**: Pressing next with repeat set to `one` now moves to the next track; the track only repeats when it finishes on its own.
+- **Android**: The notification's play/pause button did nothing, its icon never changed, and the title didn't update with new metadata.
+- **Android**: The service could restart after the process was killed and show a notification with no player behind it.
+- **Android**: Playback could stop with the screen off: the player now holds a wake lock, and a Wi-Fi lock while streaming.
+- **Android**: Calling `pause()`, `stop()`, `seek()` or `next()` from the app no longer fires the `Remote*Received` events; those now only fire for lock screen, notification, headset and Bluetooth controls.
+- **Android**: Volume set with `setVolume()` was lost on the next track, and restoring after ducking always went back to full volume.
+- **Android**: A playback error also triggered "completed" and skipped to the next track; an invalid file path crashed the call; querying state while a track was loading could put the player into an error state; `getDuration()` returned a negative value for streams.
+- **Android**: Bridge calls now run on the main thread, like the player callbacks.
+- **iOS**: Observers for finished tracks were never removed (one leaked per track); playback failures now fire `PlaybackFailed`.
+- **iOS**: `load()` no longer plays a short burst of audio and now fires `PlaybackLoaded` instead of `PlaybackStarted`.
+- **iOS**: Events were queued after merely pulling down Control Center and stayed queued until the app was backgrounded and reopened.
+- **iOS**: After a phone call, playback only resumes if it was playing before the call.
+
+### Added
+- **Both**: Playback pauses when headphones or a Bluetooth device are disconnected.
+- **Both**: `PlaybackStateChanged` is now sent whenever playing/buffering changes (and with `metadataChanged: true` after `setMetadata()`).
+- **iOS**: Now sends `PlaybackStopped`, `PlaybackSeeked`, `PlaybackFailed`, `PlaybackLoaded`, `PlaylistSet`, `PlaylistRepeatModeChanged`, `PlaylistShuffleChanged`, `RemoteSeekReceived` and `RemoteStopReceived`, matching Android.
+- **iOS**: Headphone play/pause toggle and remote stop are supported; next/previous are disabled on the lock screen for streams and single tracks.
+- **iOS**: Artwork is cached and downloaded with a timeout; the lock screen shows the file name when no title is set.
+- **Android**: `PlaylistTrackChanged` now includes `reason` (`user`, `auto` or `repeat`), matching iOS.
+- **Android**: Artwork downloads have a timeout and aren't repeated for the same image.
+
+### Changed
+- `setRepeatMode()` ignores unknown modes (treated as `none`); `setVolume()`, `setPlaybackRate()` and `setProgressInterval()` clamp their values on both platforms.
+- `PlaybackStarted` on iOS now carries the full playback state, like Android.
+- iOS deactivates the audio session on `stop()`, so other apps' audio can resume.
+
 ## [1.4.1] - 2026-11-17
 ### Fixed
 - **Events**: Native events never reached PHP listeners. NativePHP only dispatches event classes that implement `DispatchableFromNative`; every event now does (with a polyfill for older `nativephp/mobile` releases).

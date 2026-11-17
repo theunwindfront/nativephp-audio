@@ -185,7 +185,9 @@ Commonly used events:
 ## 🛠 Advanced Features
 
 ### Background Sync
-When your app returns from the background, you can "drain" any missed events that occurred while the PHP process was suspended:
+Events that happen while the app is in the background (track changes, remote controls, etc.) are queued and delivered automatically when the app returns to the foreground. Progress updates aren't queued, and the queue keeps at most the 200 most recent events.
+
+If you'd rather handle them yourself, you can take the queued events before they're delivered:
 
 ```php
 $missedEvents = Audio::drainEvents();

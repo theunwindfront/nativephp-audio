@@ -9,57 +9,57 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.media.app.NotificationCompat.MediaStyle
-import android.support.v4.media.session.MediaControllerCompat
 
+/**
+ * Foreground service that keeps playback alive in the background and shows the media notification.
+ * Notification buttons go through the MediaSession, so they behave like lock-screen controls.
+ */
 class AudioService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        instance = this
         createNotificationChannel()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val controls = AudioFunctions.getMediaController(this)?.transportControls
         when (intent?.action) {
-            ACTION_NEXT -> {
-                AudioFunctions.getMediaController(this)?.transportControls?.skipToNext()
+            ACTION_TOGGLE -> {
+                if (AudioFunctions.isPlayingNow()) controls?.pause() else controls?.play()
             }
-            ACTION_PREVIOUS -> {
-                AudioFunctions.getMediaController(this)?.transportControls?.skipToPrevious()
-            }
-            ACTION_REFRESH_STATE -> {
-
-                refreshNotification()
-            }
+            ACTION_NEXT -> controls?.skipToNext()
+            ACTION_PREVIOUS -> controls?.skipToPrevious()
+            ACTION_STOP -> controls?.stop()
             else -> {
-                intent?.getStringExtra(EXTRA_TITLE)?.let { currentTitle = it }
-                intent?.getStringExtra(EXTRA_ARTIST)?.let { currentArtist = it }
-                
-                val notification = buildNotification()
-                
                 val foregroundServiceType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                     ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK
                 } else {
                     0
                 }
-
-                ServiceCompat.startForeground(
-                    this,
-                    NOTIFICATION_ID,
-                    notification,
-                    foregroundServiceType
-                )
+                // startForeground must always be called after startForegroundService, even if we stop right away.
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, buildNotification(), foregroundServiceType)
+                if (AudioFunctions.mediaPlayer == null) {
+                    // Nothing is playing (e.g. playback stopped before the service started).
+                    stopSelf()
+                }
             }
         }
-        return START_STICKY
+        // Don't let the system restart the service after the process is killed: there would be
+        // no player behind the notification.
+        return START_NOT_STICKY
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onDestroy() {
+        if (instance === this) instance = null
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         super.onDestroy()
     }
@@ -79,6 +79,11 @@ class AudioService : Service() {
         }
     }
 
+    private fun servicePendingIntent(action: String, requestCode: Int): PendingIntent {
+        val intent = Intent(this, AudioService::class.java).apply { this.action = action }
+        return PendingIntent.getService(this, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    }
+
     private fun buildNotification(): Notification {
         val launchIntent = packageManager.getLaunchIntentForPackage(packageName)?.apply {
             addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP)
@@ -89,38 +94,37 @@ class AudioService : Service() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val sessionToken = AudioFunctions.getSessionToken(this)
-        
-        val prevIntent = Intent(this, AudioService::class.java).apply { action = ACTION_PREVIOUS }
-        val prevPendingIntent = PendingIntent.getService(this, 2, prevIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        
-        val nextIntent = Intent(this, AudioService::class.java).apply { action = ACTION_NEXT }
-        val nextPendingIntent = PendingIntent.getService(this, 3, nextIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val playing = AudioFunctions.isPlayingNow()
 
         val style = MediaStyle()
-            .setMediaSession(sessionToken)
-            .setShowActionsInCompactView(1) // Show only play/pause in compact view
+            .setMediaSession(AudioFunctions.getSessionToken(this))
+            .setShowActionsInCompactView(1) // play/pause
 
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.ic_media_play)
-            .setContentTitle(currentTitle)
-            .setContentText(currentArtist ?: "")
+            .setContentTitle(AudioFunctions.notificationTitle())
+            .setContentText(AudioFunctions.notificationArtist() ?: "")
             .setContentIntent(contentPendingIntent)
-            .setOngoing(true)
+            .setDeleteIntent(servicePendingIntent(ACTION_STOP, 4))
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .setOngoing(playing)
             .setSilent(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setStyle(style)
-            .addAction(android.R.drawable.ic_media_previous, "Previous", prevPendingIntent)
-            .addAction(android.R.drawable.ic_media_pause, "Pause", null) // Placeholder, we should probably use a toggle intent
-            .addAction(android.R.drawable.ic_media_next, "Next", nextPendingIntent)
-
+            .addAction(android.R.drawable.ic_media_previous, "Previous", servicePendingIntent(ACTION_PREVIOUS, 2))
+            .addAction(
+                if (playing) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play,
+                if (playing) "Pause" else "Play",
+                servicePendingIntent(ACTION_TOGGLE, 1)
+            )
+            .addAction(android.R.drawable.ic_media_next, "Next", servicePendingIntent(ACTION_NEXT, 3))
 
         AudioFunctions.currentArtwork?.let { builder.setLargeIcon(it) }
 
         return builder.build()
     }
 
-    private fun refreshNotification() {
+    internal fun refreshNotification() {
         val manager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         manager.notify(NOTIFICATION_ID, buildNotification())
     }
@@ -128,23 +132,20 @@ class AudioService : Service() {
     companion object {
         const val NOTIFICATION_ID = 1338
         const val CHANNEL_ID = "audio_playback_channel"
-        const val EXTRA_TITLE = "title"
-        const val EXTRA_ARTIST = "artist"
-        const val ACTION_REFRESH_STATE = "com.theunwindfront.audio.ACTION_REFRESH_STATE"
+        const val ACTION_TOGGLE = "com.theunwindfront.audio.ACTION_TOGGLE"
         const val ACTION_NEXT = "com.theunwindfront.audio.ACTION_NEXT"
         const val ACTION_PREVIOUS = "com.theunwindfront.audio.ACTION_PREVIOUS"
+        const val ACTION_STOP = "com.theunwindfront.audio.ACTION_STOP"
 
+        @Volatile
+        private var instance: AudioService? = null
 
-        var currentTitle: String = "Now Playing"
-        var currentArtist: String? = null
+        val isRunning: Boolean get() = instance != null
 
+        /** Starts the foreground service (title/artist are read from the current metadata). */
+        @Suppress("UNUSED_PARAMETER")
         fun start(context: Context, title: String, artist: String? = null) {
-            currentTitle = title
-            currentArtist = artist
-            val intent = Intent(context, AudioService::class.java).apply {
-                putExtra(EXTRA_TITLE, title)
-                artist?.let { putExtra(EXTRA_ARTIST, it) }
-            }
+            val intent = Intent(context, AudioService::class.java)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 context.startForegroundService(intent)
             } else {
@@ -156,17 +157,14 @@ class AudioService : Service() {
             context.stopService(Intent(context, AudioService::class.java))
         }
 
-        fun refreshState(context: Context) {
-            val intent = Intent(context, AudioService::class.java).apply {
-                action = ACTION_REFRESH_STATE
-            }
-            context.startService(intent)
+        /** Rebuilds the notification if the service is running; never starts it. */
+        fun refreshState() {
+            val service = instance ?: return
+            Handler(Looper.getMainLooper()).post { service.refreshNotification() }
         }
 
-        /** Update notification text when new metadata arrives. */
-        fun updateNotification(context: Context, title: String, artist: String? = null) {
-            start(context, title, artist)
-        }
+        /** Rebuilds the notification if the service is running. Kept for backwards compatibility. */
+        @Suppress("UNUSED_PARAMETER")
+        fun refreshState(context: Context) = refreshState()
     }
 }
-
