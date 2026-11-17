@@ -1,13 +1,13 @@
 {
     "name": "theunwindfront/nativephp-audio",
     "description": "Audio player plugin for NativePHP Mobile apps",
-    "version": "1.3.2",
+    "version": "1.4.0",
 
     "type": "nativephp-plugin",
     "license": "MIT",
     "require": {
         "php": "^8.2",
-        "nativephp/mobile": "^3.0",
+        "nativephp/mobile": "^3.0|^4.0",
         "illuminate/support": "^11.0|^12.0|^13.0"
     },
     "autoload": {

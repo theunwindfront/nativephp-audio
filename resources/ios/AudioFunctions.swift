@@ -63,7 +63,7 @@ class AudioFunctions: NSObject {
             pendingEvents.append(["event": fullName, "payload": payload])
             return
         }
-        NativePHPBridge.dispatchEvent(fullName, data: payload)
+        LaravelBridge.shared.send?(fullName, payload)
     }
 
     private static func trackPayload() -> [String: Any] {
