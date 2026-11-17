@@ -1,5 +1,12 @@
 # Release Notes
 
+## [1.4.0] - 2026-11-17
+### Added
+- **Compatibility**: Support for NativePHP Mobile v4 (`nativephp/mobile: ^3.0|^4.0`).
+
+### Fixed
+- **iOS**: Events were sent through `NativePHPBridge.dispatchEvent`, which doesn't exist in NativePHP Mobile v3 or v4. Events now go through `LaravelBridge.shared.send`.
+
 ## [1.3.2] - 2026-11-17
 ### Fixed
 - **iOS**: Build failure in `PluginBridgeFunctionRegistration.swift` ("argument type '[String : Any]' does not conform to expected type 'BridgeFunction'"). NativePHP registers iOS bridge functions as `AudioFunctions.<Name>()`, which needs a `BridgeFunction` type, but the plugin only exposed static methods. Each bridge function is now a nested `BridgeFunction` class that forwards to the existing static handler (renamed to `handle<Name>`).
