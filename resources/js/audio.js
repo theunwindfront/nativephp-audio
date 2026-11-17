@@ -1,98 +1,131 @@
+/**
+ * Calls a native bridge function through NativePHP's `/_native/api/call` endpoint.
+ * Resolves with the function's result; rejects if the bridge reports an error.
+ */
+export async function bridgeCall(method, params = {}) {
+    const response = await fetch('/_native/api/call', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest',
+        },
+        body: JSON.stringify({ method, params }),
+    });
+
+    let result = null;
+    try {
+        result = await response.json();
+    } catch (_) {
+        // Non-JSON response; handled below.
+    }
+
+    if (!response.ok || !result || result.status === 'error') {
+        const message = result?.message || `Native call ${method} failed (HTTP ${response.status})`;
+        const error = new Error(message);
+        error.code = result?.code;
+        error.response = result;
+        throw error;
+    }
+
+    return result.data;
+}
+
 const audioPlayer = {
     play: async (url, metadata = {}) => {
-        return await window.nativephp.call('Audio.play', { url, ...metadata });
+        return await bridgeCall('Audio.play', { url, ...metadata });
     },
     playStream: async (mountpoint, metadata = {}) => {
-        return await window.nativephp.call('Audio.playStream', { mountpoint, ...metadata });
+        return await bridgeCall('Audio.playStream', { mountpoint, ...metadata });
     },
     load: async (url, metadata = {}) => {
-        return await window.nativephp.call('Audio.load', { url, ...metadata });
+        return await bridgeCall('Audio.load', { url, ...metadata });
     },
     pause: async () => {
-        return await window.nativephp.call('Audio.pause');
+        return await bridgeCall('Audio.pause');
     },
     resume: async () => {
-        return await window.nativephp.call('Audio.resume');
+        return await bridgeCall('Audio.resume');
     },
     stop: async () => {
-        return await window.nativephp.call('Audio.stop');
+        return await bridgeCall('Audio.stop');
     },
     seek: async (seconds) => {
-        return await window.nativephp.call('Audio.seek', { seconds });
+        return await bridgeCall('Audio.seek', { seconds });
     },
     setVolume: async (level) => {
-        return await window.nativephp.call('Audio.setVolume', { level });
+        return await bridgeCall('Audio.setVolume', { level });
     },
     setMetadata: async (metadata) => {
-        return await window.nativephp.call('Audio.setMetadata', metadata);
+        return await bridgeCall('Audio.setMetadata', metadata);
     },
-    updateStreamMetadata: async (metadata) => window.nativephp.call('Audio.updateStreamMetadata', metadata),
+    updateStreamMetadata: async (metadata) => bridgeCall('Audio.updateStreamMetadata', metadata),
     setPlaybackRate: async (rate) => {
-        return await window.nativephp.call('Audio.setPlaybackRate', { rate });
+        return await bridgeCall('Audio.setPlaybackRate', { rate });
     },
     setSleepTimer: async (seconds) => {
-        return await window.nativephp.call('Audio.setSleepTimer', { seconds });
+        return await bridgeCall('Audio.setSleepTimer', { seconds });
     },
     cancelSleepTimer: async () => {
-        return await window.nativephp.call('Audio.cancelSleepTimer');
+        return await bridgeCall('Audio.cancelSleepTimer');
     },
     setProgressInterval: async (seconds) => {
-        return await window.nativephp.call('Audio.setProgressInterval', { seconds });
+        return await bridgeCall('Audio.setProgressInterval', { seconds });
     },
     
     // Playlist Management
     setPlaylist: async (tracks, autoPlay = true, startIndex = 0) => {
-        return await window.nativephp.call('Audio.setPlaylist', { items: tracks, autoPlay, startIndex });
+        return await bridgeCall('Audio.setPlaylist', { items: tracks, autoPlay, startIndex });
     },
     appendTrack: async (track) => {
-        return await window.nativephp.call('Audio.appendTrack', { track });
+        return await bridgeCall('Audio.appendTrack', { track });
     },
     removeTrack: async (index) => {
-        return await window.nativephp.call('Audio.removeTrack', { index });
+        return await bridgeCall('Audio.removeTrack', { index });
     },
     playTrackAt: async (index) => {
-        return await window.nativephp.call('Audio.playTrackAt', { index });
+        return await bridgeCall('Audio.playTrackAt', { index });
     },
     skipTo: async (index) => {
-        return await window.nativephp.call('Audio.skipTrack', { index });
+        return await bridgeCall('Audio.skipTrack', { index });
     },
     next: async () => {
-        return await window.nativephp.call('Audio.nextTrack');
+        return await bridgeCall('Audio.nextTrack');
     },
     previous: async () => {
-        return await window.nativephp.call('Audio.previousTrack');
+        return await bridgeCall('Audio.previousTrack');
     },
     setRepeatMode: async (mode) => {
-        return await window.nativephp.call('Audio.setRepeatMode', { mode });
+        return await bridgeCall('Audio.setRepeatMode', { mode });
     },
     setShuffleMode: async (enabled) => {
-        return await window.nativephp.call('Audio.setShuffleMode', { shuffle: enabled });
+        return await bridgeCall('Audio.setShuffleMode', { shuffle: enabled });
     },
 
     // State & Introspection
     getState: async () => {
-        return await window.nativephp.call('Audio.getState');
+        return await bridgeCall('Audio.getState');
     },
     getDuration: async () => {
-        return await window.nativephp.call('Audio.getDuration');
+        return await bridgeCall('Audio.getDuration');
     },
     getCurrentPosition: async () => {
-        return await window.nativephp.call('Audio.getCurrentPosition');
+        return await bridgeCall('Audio.getCurrentPosition');
     },
     getTrack: async (index) => {
-        return await window.nativephp.call('Audio.getTrack', { index });
+        return await bridgeCall('Audio.getTrack', { index });
     },
     getActiveTrack: async () => {
-        return await window.nativephp.call('Audio.getActiveTrack');
+        return await bridgeCall('Audio.getActiveTrack');
     },
     getActiveTrackIndex: async () => {
-        return await window.nativephp.call('Audio.getActiveTrackIndex');
+        return await bridgeCall('Audio.getActiveTrackIndex');
     },
     getPlaylist: async () => {
-        return await window.nativephp.call('Audio.getPlaylist');
+        return await bridgeCall('Audio.getPlaylist');
     },
     drainEvents: async () => {
-        return await window.nativephp.call('Audio.drainEvents');
+        return await bridgeCall('Audio.drainEvents');
     }
 };
 

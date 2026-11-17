@@ -2,15 +2,6 @@
 
 namespace Theunwindfront\Audio\Events;
 
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
-
-class RemoteStopReceived
+class RemoteStopReceived extends AudioEvent
 {
-    use Dispatchable, SerializesModels;
-
-    public function __construct(
-        public array $state
-    ) {
-    }
 }

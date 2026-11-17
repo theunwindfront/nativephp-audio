@@ -2,20 +2,11 @@
 
 namespace Theunwindfront\Audio\Events;
 
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
-
-class PlaylistTrackChanged
+class PlaylistTrackChanged extends AudioEvent
 {
-    use Dispatchable, SerializesModels;
-
-    public function __construct(
-        public int $index,
-        public string $reason,
-        public array $track,
-        public ?int $lastIndex = null,
-        public ?float $lastPosition = null,
-        public ?array $lastTrack = null
-    ) {
-    }
+    public ?int $index = null;
+    public ?string $reason = null;
+    public ?int $lastIndex = null;
+    public ?float $lastPosition = null;
+    public ?array $lastTrack = null;
 }

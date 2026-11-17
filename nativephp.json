@@ -219,6 +219,7 @@
     },
 
     "ios": {
+        "init_function": "AudioFunctions.setupAudioSession",
         "min_version": "13.0",
         "background_modes": ["audio"],
         "info_plist": {

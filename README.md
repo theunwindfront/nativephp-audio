@@ -113,14 +113,14 @@ Audio::updateStreamMetadata([
 
 If you are building a SPA (Inertia/Vue/React) or using Alpine.js, you can use the JavaScript bridge directly.
 
-First, include the bridge in your layout:
-```html
-@include('audio::bridge')
+First, add the event bridge to your layout (it forwards native audio events to `window` as `audio:*` events):
+```blade
+@nativeAudioBridge
 ```
 
-Then, use the `audio` helper:
+Then, use the `audio` helper. Each method calls NativePHP's `/_native/api/call` endpoint, resolves with the native result and throws if the call fails:
 ```javascript
-import audio from './resources/js/audio.js';
+import audio from '../../vendor/theunwindfront/nativephp-audio/resources/js/audio.js';
 
 // Play immediately
 await audio.play('https://server.com/song.mp3', { title: 'My Song' });
@@ -152,7 +152,25 @@ window.addEventListener('audio:stream-metadata-changed', (event) => {
 
 ### 📡 Event Synchronization
 
-This plugin dispatches powerful Laravel events that you can listen to in your application:
+This plugin dispatches Laravel events from the native player. Listen for them like any other Laravel event, or with `#[OnNative]` in Livewire / NativePHP components:
+
+```php
+use Native\Mobile\Attributes\OnNative;
+use Theunwindfront\Audio\Events\PlaybackProgressUpdated;
+use Theunwindfront\Audio\Events\PlaylistTrackChanged;
+
+#[OnNative(PlaybackProgressUpdated::class)]
+public function onProgress($position, $duration) { /* ... */ }
+
+// Or a regular listener
+Event::listen(PlaylistTrackChanged::class, function (PlaylistTrackChanged $event) {
+    logger("Now playing {$event->track['title']} ({$event->index})");
+});
+```
+
+Every event exposes the native payload as `$event->payload`, plus typed properties when present: `track`, `url`, `position`, `duration`, `isPlaying`, `isBuffering`, `playbackRate`, `repeatMode`, `shuffleMode`, `playlistIndex`, `playlistTotal`, `isStream`, `streamType`, `mountpoint`. Some events add their own fields (`PlaybackFailed::$error`, `PlaybackSeeked::$from/$to`, `PlaylistTrackChanged::$index/$reason/$lastIndex/$lastPosition/$lastTrack`, `StreamMetadataChanged::$metadata`, `PlaylistSet::$total`, `PlaylistRepeatModeChanged::$mode`, `PlaylistShuffleChanged::$shuffle`).
+
+Commonly used events:
 
 | Event | Description |
 |-------|-------------|
