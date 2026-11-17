@@ -2,16 +2,8 @@
 
 namespace Theunwindfront\Audio\Events;
 
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
-
-class PlaybackSeeked
+class PlaybackSeeked extends AudioEvent
 {
-    use Dispatchable, SerializesModels;
-
-    public function __construct(
-        public float $from,
-        public float $to
-    ) {
-    }
+    public ?float $from = null;
+    public ?float $to = null;
 }

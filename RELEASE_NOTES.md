@@ -1,5 +1,19 @@
 # Release Notes
 
+## [1.4.1] - 2026-11-17
+### Fixed
+- **Events**: Native events never reached PHP listeners. NativePHP only dispatches event classes that implement `DispatchableFromNative`; every event now does (with a polyfill for older `nativephp/mobile` releases).
+- **Events**: Event constructors didn't match the payloads sent by iOS/Android (e.g. `PlaybackStarted` required `url` but received `track`), so building the event failed. All events now extend `AudioEvent`, which accepts any payload, fills matching typed properties (`track`, `url`, `position`, `duration`, `isPlaying`, …) and keeps the raw data in `$payload`. `$url` is filled from `track.url`, and `$state` is kept as an alias of `$payload`.
+- **Blade bridge**: `@nativeAudioBridge` listened for `nativephp_event`, but NativePHP fires `native-event`, so `audio:*` window events never fired.
+- **JS library**: `audio.js` called `window.nativephp.call`, which doesn't exist. It now calls NativePHP's `/_native/api/call` endpoint, resolves with the native result and throws on errors. `bridgeCall` is also exported.
+- **iOS**: `setupAudioSession()` was never called, so background playback, the silent-switch override and interruption handling didn't work. It's now registered as the plugin's `ios.init_function`; the audio session is activated when playback starts rather than at app launch, so opening the app doesn't stop other apps' audio.
+
+### Changed
+- Event properties are now nullable, and constructors take named payload keys instead of positional arguments.
+
+### Added
+- PHPUnit setup (`composer test`), event tests, and a GitHub Actions workflow that runs them.
+
 ## [1.4.0] - 2026-11-17
 ### Added
 - **Compatibility**: Support for NativePHP Mobile v4 (`nativephp/mobile: ^3.0|^4.0`).

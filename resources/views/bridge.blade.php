@@ -1,25 +1,31 @@
 <script>
-    document.addEventListener('nativephp_event', (event) => {
-        const { event: name, payload } = event.detail;
+    (() => {
+        if (window.__nativeAudioBridge) return;
+        window.__nativeAudioBridge = true;
 
-        if (name.startsWith('Theunwindfront\\Audio\\Events\\')) {
-            const eventName = name.split('\\').pop();
+        const prefix = 'Theunwindfront\\Audio\\Events\\';
+        const legacyMap = {
+            'playback-started': 'audio-started',
+            'playback-paused': 'audio-paused',
+            'playback-stopped': 'audio-stopped',
+            'playback-completed': 'audio-completed',
+        };
+
+        // NativePHP fires `native-event` on the document for every event sent from native code.
+        document.addEventListener('native-event', (event) => {
+            const { event: name, payload } = event.detail || {};
+
+            if (typeof name !== 'string' || !name.startsWith(prefix)) return;
+
+            const eventName = name.slice(prefix.length);
             const kebabName = eventName.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase();
-            
-            // Dispatch a generic prefixed event e.g. 'audio:playback-started'
+
+            // e.g. 'audio:playback-started'
             window.dispatchEvent(new CustomEvent(`audio:${kebabName}`, { detail: payload }));
-            
-            // Legacy mapping for common events
-            const legacyMap = {
-                'playback-started': 'audio-started',
-                'playback-paused': 'audio-paused',
-                'playback-stopped': 'audio-stopped',
-                'playback-completed': 'audio-completed'
-            };
-            
+
             if (legacyMap[kebabName]) {
                 window.dispatchEvent(new CustomEvent(legacyMap[kebabName], { detail: payload }));
             }
-        }
-    });
+        });
+    })();
 </script>

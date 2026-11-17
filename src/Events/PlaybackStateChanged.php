@@ -2,17 +2,7 @@
 
 namespace Theunwindfront\Audio\Events;
 
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
-
-class PlaybackStateChanged
+class PlaybackStateChanged extends AudioEvent
 {
-    use Dispatchable, SerializesModels;
-
-    public function __construct(
-        public bool $isPlaying,
-        public bool $isBuffering,
-        public bool $metadataChanged = false
-    ) {
-    }
+    public ?bool $metadataChanged = null;
 }

@@ -2,15 +2,7 @@
 
 namespace Theunwindfront\Audio\Events;
 
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
-
-class PlaylistShuffleChanged
+class PlaylistShuffleChanged extends AudioEvent
 {
-    use Dispatchable, SerializesModels;
-
-    public function __construct(
-        public bool $shuffle
-    ) {
-    }
+    public ?bool $shuffle = null;
 }

@@ -2,15 +2,7 @@
 
 namespace Theunwindfront\Audio\Events;
 
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
-
-class PlaylistSet
+class PlaylistSet extends AudioEvent
 {
-    use Dispatchable, SerializesModels;
-
-    public function __construct(
-        public int $total
-    ) {
-    }
+    public ?int $total = null;
 }

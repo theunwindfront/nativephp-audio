@@ -2,14 +2,7 @@
 
 namespace Theunwindfront\Audio\Events;
 
-use Illuminate\Foundation\Events\Dispatchable;
-use Illuminate\Queue\SerializesModels;
-
-class PlaybackFailed
+class PlaybackFailed extends AudioEvent
 {
-    use Dispatchable, SerializesModels;
-
-    public function __construct(public string $url, public string $error)
-    {
-    }
+    public ?string $error = null;
 }

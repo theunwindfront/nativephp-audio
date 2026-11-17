@@ -120,14 +120,27 @@ class AudioFunctions: NSObject {
     }
 
     // MARK: - Initialization
+    private static var sessionConfigured = false
+
+    /// Registered as the plugin's `ios.init_function`, so NativePHP calls it once at app startup.
+    /// Sets the `.playback` category (background audio, ignores the silent switch) and registers
+    /// lifecycle and interruption observers. The session is only activated when playback starts,
+    /// so launching the app doesn't interrupt audio from other apps.
     @objc static func setupAudioSession() {
+        guard !sessionConfigured else { return }
+        sessionConfigured = true
+
         try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
-        try? AVAudioSession.sharedInstance().setActive(true)
-        
+
         NotificationCenter.default.addObserver(forName: UIApplication.willResignActiveNotification, object: nil, queue: .main) { _ in isInBackground = true }
         NotificationCenter.default.addObserver(forName: UIApplication.willEnterForegroundNotification, object: nil, queue: .main) { _ in isInBackground = false }
-        
+
         setupAudioSessionObservers()
+    }
+
+    private static func activateAudioSession() {
+        setupAudioSession()
+        try? AVAudioSession.sharedInstance().setActive(true)
     }
 
     private static func refreshNowPlayingInfo() {
@@ -293,6 +306,7 @@ class AudioFunctions: NSObject {
     }
 
     private static func preparePlayer(url: URL) {
+        activateAudioSession()
         stopProgressTimer()
         bufferingObservation?.invalidate()
         readyObservation?.invalidate()
