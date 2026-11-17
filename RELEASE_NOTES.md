@@ -1,6 +1,11 @@
 # Release Notes
 
-## [1.3.0] - 2026-06-09
+## [1.3.2] - 2026-11-17
+### Fixed
+- **iOS**: Build failure in `PluginBridgeFunctionRegistration.swift` ("argument type '[String : Any]' does not conform to expected type 'BridgeFunction'"). NativePHP registers iOS bridge functions as `AudioFunctions.<Name>()`, which needs a `BridgeFunction` type, but the plugin only exposed static methods. Each bridge function is now a nested `BridgeFunction` class that forwards to the existing static handler (renamed to `handle<Name>`).
+- **iOS**: Bridge calls now run on the main thread, since AVPlayer, Now Playing info and remote commands expect main-thread access.
+
+## [1.3.1] - 2026-06-09
 ### Added
 - **Live Radio Streaming**: New `PlayStream` bridge function for both Android and iOS, enabling first-class live audio stream playback (Icecast, Shoutcast, HTTP streams).
 - **PHP**: `Audio::playStream($mountpoint, $options)` for starting live streams from PHP.
